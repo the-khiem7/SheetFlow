@@ -1,0 +1,47 @@
+# ------------------------------
+# Secrets / local credentials
+# ------------------------------
+# clasp auth token (always ignore)
+.clasprc.json
+
+# Optional: keep local clasp project mapping out of git.
+# Uncomment if you do not want to share scriptId/rootDir in repo.
+# .clasp.json
+
+# ------------------------------
+# Dependencies / build artifacts
+# ------------------------------
+node_modules/
+dist/
+build/
+coverage/
+
+# ------------------------------
+# Logs
+# ------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------
+# Environment files
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------
+# OS / editor junk
+# ------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ------------------------------
+# Temp files
+# ------------------------------
+*.tmp
+*.temp
