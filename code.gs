@@ -3,22 +3,23 @@ function onEdit(e) {
 
   const sheetName = "Backlogs";
   const startRow = 3;
-  const startCol = 1;
-  const numCols = 6;
-  const sortableCols = [3, 4, 5];
+  const startCol = 1; // A
+  const numCols = 6;  // A:F
 
   const sheet = e.range.getSheet();
   if (sheet.getName() !== sheetName) return;
   if (e.range.rowStart < startRow) return;
-  if (!sortableCols.includes(e.range.columnStart)) return;
+
+  const editedCol = e.range.columnStart;
+  if (editedCol < startCol || editedCol > startCol + numCols - 1) return;
 
   const lastRow = sheet.getLastRow();
   if (lastRow < startRow) return;
 
   sheet.getRange(startRow, startCol, lastRow - startRow + 1, numCols).sort([
-    { column: 5, ascending: false },
-    { column: 4, ascending: false },
-    { column: 3, ascending: true }
+    { column: 5, ascending: false }, // E = Ngày thực hiện
+    { column: 4, ascending: false }, // D = Trạng thái
+    { column: 3, ascending: true }   // C = Mức độ ưu tiên
   ]);
 
   applyDateBorders(sheet, startRow, numCols);
@@ -63,7 +64,7 @@ function applyDateBorders(sheet, startRow, numCols) {
 
     if (current && prev && current.toString() !== prev.toString()) {
       sheet.getRange(row, 1, 1, numCols)
-        .setBorder(true, false, false, false, false, false, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+        .setBorder(true, false, false, false, false, false, "black", SpreadsheetApp.BorderStyle.SOLID);
     }
   }
 }
