@@ -1,38 +1,42 @@
 function onEdit(e) {
   if (!e) return;
 
-  const sheet = e.range.getSheet();
-  const sheetName = sheet.getName();
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(200)) return;
 
-  if (sheetName === "Backlogs") {
-    handleBacklogsEdit_(sheet, e);
-    refreshDailyReport();
-    return;
-  }
+  try {
+    const sheet = e.range.getSheet();
+    if (sheet.getName() !== "Backlogs") return;
+    if (e.range.rowStart < 3) return;
 
-  if (sheetName === "Daily Report") {
-    return;
+    const col = e.range.columnStart;
+    const isInsideBacklogsTable = col >= 1 && col <= 6;
+    if (!isInsideBacklogsTable) return;
+
+    sortAndFormatBacklogs_(sheet);
+
+    const shouldRefreshDailyReport = [1, 2, 4, 5].includes(col);
+    if (shouldRefreshDailyReport) {
+      refreshDailyReport();
+    }
+  } finally {
+    lock.releaseLock();
   }
 }
 
-function handleBacklogsEdit_(sheet, e) {
+function sortAndFormatBacklogs_(sheet) {
   const startRow = 3;
-  const startCol = 1; // A
-  const numCols = 6;  // A:F
-
-  if (e.range.rowStart < startRow) return;
-
-  const editedCol = e.range.columnStart;
-  if (editedCol < startCol || editedCol > startCol + numCols - 1) return;
+  const startCol = 1;
+  const numCols = 6;
 
   const lastRow = sheet.getLastRow();
   if (lastRow < startRow) return;
 
   sheet.getRange(startRow, startCol, lastRow - startRow + 1, numCols).sort([
-    { column: 5, ascending: false }, // E = Ngày thực hiện
-    { column: 4, ascending: false }, // D = Trạng thái
-    { column: 3, ascending: true },  // C = Mức độ ưu tiên
-    { column: 1, ascending: true }   // A = Project A-Z
+    { column: 5, ascending: false },
+    { column: 4, ascending: false },
+    { column: 3, ascending: true },
+    { column: 1, ascending: true }
   ]);
 
   applyDateBorders(sheet, startRow, numCols);
@@ -243,6 +247,12 @@ function safeTrim_(value) {
 }
 
 function refreshAll() {
-  sortBacklogs();
-  refreshDailyReport();
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(5000);
+  try {
+    sortBacklogs();
+    refreshDailyReport();
+  } finally {
+    lock.releaseLock();
+  }
 }
