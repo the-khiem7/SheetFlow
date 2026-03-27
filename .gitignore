@@ -5,8 +5,7 @@
 .clasprc.json
 
 # Optional: keep local clasp project mapping out of git.
-# Uncomment if you do not want to share scriptId/rootDir in repo.
-# .clasp.json
+.clasp.json
 
 # ------------------------------
 # Dependencies / build artifacts
