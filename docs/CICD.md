@@ -72,12 +72,19 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install clasp
-        run: npm install -g @google/clasp
+      - name: Install dependencies
+        run: |
+          npm install -g @google/clasp
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup clasp credentials
         run: |
           echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      - name: Generate .clasp.json from template
+        run: |
+          # Use jq to safely replace scriptId in JSON
+          jq --arg scriptId "${{ secrets.SCRIPT_ID }}" '.scriptId = $scriptId' .clasp.json.example > .clasp.json
 
       - name: Push to Apps Script
         run: clasp push

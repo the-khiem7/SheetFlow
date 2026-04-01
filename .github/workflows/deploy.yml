@@ -21,14 +21,33 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install clasp
-        run: npm install -g @google/clasp
+      - name: Install dependencies
+        run: |
+          npm install -g @google/clasp
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup clasp credentials
         run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
 
       - name: Generate .clasp.json from template
-        run: sed 's/<YOUR_SCRIPT_ID>/${{ secrets.SCRIPT_ID }}/' .clasp.json.example > .clasp.json
+        run: |
+          # Use jq to safely replace scriptId in JSON
+          jq --arg scriptId "${{ secrets.SCRIPT_ID }}" '.scriptId = $scriptId' .clasp.json.example > .clasp.json
+
+          # Validate generated JSON
+          if ! jq empty .clasp.json; then
+            echo "❌ Generated .clasp.json is invalid JSON"
+            exit 1
+          fi
+
+          echo "✅ Generated .clasp.json is valid JSON"
 
       - name: Push to Apps Script
-        run: clasp push
+        run: |
+          echo "📁 Listing files to push:"
+          clasp status
+
+          echo "🚀 Pushing to Apps Script..."
+          clasp push
+
+          echo "✅ Deploy completed successfully"
