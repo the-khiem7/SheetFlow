@@ -123,6 +123,22 @@ See the pipeline diagram above. Push to `main` triggers automatic deployment.
 
 See [docs/CICD.md](docs/CICD.md) for full setup guide.
 
+## Project Structure
+
+```
+├── /test/                 # Test files (local only, not deployed)
+│   ├── test.runner.gs     # Main test runner
+│   ├── sort.service.test.gs
+│   └── border.test.gs
+├── config.gs             # Configuration constants
+├── utils.gs              # Utility functions
+├── format.service.gs     # Border and formatting logic
+├── backlog.service.gs    # Task management service
+├── dailyreport.service.gs # Report generation service
+├── main.gs               # Apps Script entry points
+└── docs/                 # Documentation
+```
+
 ## Documentation
 
 | Doc | Description |

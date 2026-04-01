@@ -11,6 +11,6 @@
     "backlog.service.gs",
     "dailyreport.service.gs",
     "main.gs"
-  ],
+  ]
   "skipSubdirectories": false
 }
