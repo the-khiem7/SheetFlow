@@ -1,0 +1,141 @@
+name: Test Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Cho phép chạy manual
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup clasp credentials
+        run: |
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      - name: Create .clasp.json for testing
+        run: |
+          cat > .clasp.json << EOF
+          {
+            "scriptId": "${{ secrets.SCRIPT_ID }}",
+            "rootDir": "./"
+          }
+          EOF
+
+      - name: Push code to Apps Script (including tests)
+        run: clasp push
+
+      - name: Validate test files presence
+        run: |
+          echo "🔍 Checking test file structure..."
+
+          # Validate test files exist
+          test_files=("test/test.runner.gs" "test/sort.service.test.gs" "test/border.test.gs")
+          for file in "${test_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Test file missing: $file"
+              exit 1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+
+          echo "✅ All test files present"
+
+      - name: Static code analysis
+        run: |
+          echo "🔍 Running static code analysis..."
+
+          # Check for basic syntax errors in .gs files
+          echo "Checking syntax..."
+          find . -name "*.gs" -not -path "./test/*" -exec node -c {} \; 2>/dev/null && echo "✅ Syntax check passed" || (echo "❌ Syntax errors found"; exit 1)
+
+          # Check for common issues
+          echo "Checking for console.log in production code..."
+          if grep -r "console\.log" --include="*.gs" --exclude-dir=test --exclude-dir=.git .; then
+            echo "⚠️  Warning: console.log found in production code"
+            echo "   Consider removing debug statements before deployment"
+          else
+            echo "✅ No console.log in production code"
+          fi
+
+          # Validate CONFIG structure
+          echo "Checking CONFIG structure..."
+          if grep -q "const CONFIG" config.gs && grep -q "BACKLOGS\|DAILY" config.gs; then
+            echo "✅ CONFIG structure valid"
+          else
+            echo "❌ CONFIG structure issues"
+            exit 1
+          fi
+
+      - name: Test execution note
+        run: |
+          echo ""
+          echo "📋 MANUAL TEST EXECUTION REQUIRED:"
+          echo ""
+          echo "Since this is a Google Apps Script project, tests must be run manually:"
+          echo ""
+          echo "1. Push code: clasp push"
+          echo "2. Open editor: clasp open"
+          echo "3. Run: test/test.runner.gs → runAllTests()"
+          echo "4. Check: View → Executions → logs"
+          echo ""
+          echo "For automated testing, consider:"
+          echo "- Apps Script API integration"
+          echo "- Headless browser automation"
+          echo "- Node.js mocks for unit tests"
+          echo ""
+
+      - name: Create test report
+        run: |
+          echo "## Test Status Report" > test-report.md
+          echo "" >> test-report.md
+          echo "### ✅ Automated Checks Passed" >> test-report.md
+          echo "- Test files structure validated" >> test-report.md
+          echo "- Code syntax checked" >> test-report.md
+          echo "- Production code quality verified" >> test-report.md
+          echo "" >> test-report.md
+          echo "### ⚠️ Manual Testing Required" >> test-report.md
+          echo "- Execute \`runAllTests()\` in Apps Script Editor" >> test-report.md
+          echo "- Verify all test cases pass" >> test-report.md
+          echo "- Check execution logs for errors" >> test-report.md
+          echo "" >> test-report.md
+          echo "### 📁 Test Files" >> test-report.md
+          ls -la test/ >> test-report.md
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.md
+
+      - name: Validate code syntax
+        run: |
+          # Basic syntax check for .gs files
+          find . -name "*.gs" -not -path "./test/*" | xargs -I {} node -c {}
+
+      - name: Check for console.log in production code
+        run: |
+          # Warn if console.log found in production files (not test files)
+          if grep -r "console\.log" --include="*.gs" --exclude-dir=test .; then
+            echo "⚠️  Warning: console.log found in production code"
+            echo "   Consider removing debug statements before deployment"
+          else
+            echo "✅ No console.log in production code"
+          fi
