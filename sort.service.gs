@@ -23,7 +23,7 @@ const SortService = {
       // Empty dates sort before filled dates within their pinned/unpinned group
       if (!dateA && !dateB) {
         // Both empty, sort by status asc, priority asc, project asc, task asc
-        const statusCompare = String(a[3]).localeCompare(String(b[3]));
+        const statusCompare = this._compareStatus(a[3], b[3]);
         if (statusCompare !== 0) return statusCompare;
         const priorityCompare = this._comparePriority(a[2], b[2]);
         if (priorityCompare !== 0) return priorityCompare;
@@ -39,7 +39,7 @@ const SortService = {
       if (dateCompare !== 0) return dateCompare;
 
       // Same date: status asc, priority asc, project asc, task asc
-      const statusCompare = String(a[3]).localeCompare(String(b[3]));
+      const statusCompare = this._compareStatus(a[3], b[3]);
       if (statusCompare !== 0) return statusCompare;
       const priorityCompare = this._comparePriority(a[2], b[2]);
       if (priorityCompare !== 0) return priorityCompare;
@@ -87,5 +87,20 @@ const SortService = {
     const valB = priorityOrder[String(b).trim()] || 0;
 
     return valB - valA; // Ascending (Cao first)
+  },
+
+  /**
+   * Compares status values (Finished > Review > Processing > Ready > Planned > Aborted, ascending)
+   * @param {string} a - Status A
+   * @param {string} b - Status B
+   * @returns {number} - Comparison result
+   */
+  _compareStatus(a, b) {
+    const statusOrder = { 'Finished': 6, 'Review': 5, 'Processing': 4, 'Ready': 3, 'Planned': 2, 'Aborted': 1 };
+
+    const valA = statusOrder[String(a).trim()] || 0;
+    const valB = statusOrder[String(b).trim()] || 0;
+
+    return valB - valA; // Ascending (Finished first)
   }
 };
