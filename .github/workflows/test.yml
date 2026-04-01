@@ -1,4 +1,4 @@
-name: Test Apps Script
+name: Test Code Quality
 
 on:
   push:
@@ -10,8 +10,8 @@ on:
   workflow_dispatch: # Cho phép chạy manual
 
 jobs:
-  test:
-    name: Run Tests
+  quality-check:
+    name: Code Quality & Test Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,24 +22,25 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install clasp
-        run: npm install -g @google/clasp
-
-      - name: Setup clasp credentials
+      - name: Validate project structure
         run: |
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          echo "🔍 Checking project structure..."
 
-      - name: Create .clasp.json for testing
-        run: |
-          cat > .clasp.json << EOF
-          {
-            "scriptId": "${{ secrets.SCRIPT_ID }}",
-            "rootDir": "./"
-          }
-          EOF
+          # Check required directories
+          if [ ! -d "test" ]; then
+            echo "❌ test/ directory missing"
+            exit 1
+          fi
 
-      - name: Push code to Apps Script (including tests)
-        run: clasp push
+          # Check required files
+          required_files=("config.gs" "utils.gs" "format.service.gs" "backlog.service.gs" "dailyreport.service.gs" "main.gs")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Production file missing: $file"
+              exit 1
+            fi
+          done
+          echo "✅ Production files present"
 
       - name: Validate test files presence
         run: |
@@ -62,11 +63,24 @@ jobs:
         run: |
           echo "🔍 Running static code analysis..."
 
-          # Check for basic syntax errors in .gs files
+          # Check for basic syntax errors in .gs files (excluding test files)
           echo "Checking syntax..."
-          find . -name "*.gs" -not -path "./test/*" -exec node -c {} \; 2>/dev/null && echo "✅ Syntax check passed" || (echo "❌ Syntax errors found"; exit 1)
+          syntax_errors=0
+          for file in $(find . -name "*.gs" -not -path "./test/*" -not -path "./.git/*"); do
+            if ! node -c "$file" 2>/dev/null; then
+              echo "❌ Syntax error in: $file"
+              syntax_errors=$((syntax_errors + 1))
+            fi
+          done
 
-          # Check for common issues
+          if [ $syntax_errors -gt 0 ]; then
+            echo "❌ Found $syntax_errors syntax errors"
+            exit 1
+          else
+            echo "✅ Syntax check passed"
+          fi
+
+          # Check for common issues in production code
           echo "Checking for console.log in production code..."
           if grep -r "console\.log" --include="*.gs" --exclude-dir=test --exclude-dir=.git .; then
             echo "⚠️  Warning: console.log found in production code"
@@ -84,46 +98,69 @@ jobs:
             exit 1
           fi
 
-      - name: Test execution note
+      - name: Validate .clasp.json.example
+        run: |
+          echo "🔍 Validating .clasp.json.example..."
+
+          # Check if it's valid JSON
+          if ! jq empty .clasp.json.example 2>/dev/null; then
+            echo "❌ .clasp.json.example is not valid JSON"
+            exit 1
+          fi
+
+          # Check required fields
+          if ! jq -e '.scriptId and .filePushOrder' .clasp.json.example >/dev/null; then
+            echo "❌ .clasp.json.example missing required fields"
+            exit 1
+          fi
+
+          echo "✅ .clasp.json.example is valid"
+
+      - name: Test execution guidance
         run: |
           echo ""
           echo "📋 MANUAL TEST EXECUTION REQUIRED:"
           echo ""
-          echo "Since this is a Google Apps Script project, tests must be run manually:"
+          echo "⚠️  IMPORTANT: This CI pipeline does NOT execute tests automatically."
+          echo "   Google Apps Script tests must be run manually in the Apps Script environment:"
           echo ""
-          echo "1. Push code: clasp push"
-          echo "2. Open editor: clasp open"
-          echo "3. Run: test/test.runner.gs → runAllTests()"
-          echo "4. Check: View → Executions → logs"
+          echo "   1. Setup local: clasp login && clasp clone <script-id>"
+          echo "   2. Push code: clasp push"
+          echo "   3. Open editor: clasp open"
+          echo "   4. Run tests: test/test.runner.gs → runAllTests()"
+          echo "   5. Check logs: View → Executions → logs"
           echo ""
-          echo "For automated testing, consider:"
-          echo "- Apps Script API integration"
-          echo "- Headless browser automation"
-          echo "- Node.js mocks for unit tests"
+          echo "🔄 For automated testing in future:"
+          echo "   - Apps Script API integration"
+          echo "   - Headless browser automation"
+          echo "   - Node.js unit tests with mocks"
           echo ""
 
-      - name: Create test report
+      - name: Create quality report
         run: |
-          echo "## Test Status Report" > test-report.md
-          echo "" >> test-report.md
-          echo "### ✅ Automated Checks Passed" >> test-report.md
-          echo "- Test files structure validated" >> test-report.md
-          echo "- Code syntax checked" >> test-report.md
-          echo "- Production code quality verified" >> test-report.md
-          echo "" >> test-report.md
-          echo "### ⚠️ Manual Testing Required" >> test-report.md
-          echo "- Execute \`runAllTests()\` in Apps Script Editor" >> test-report.md
-          echo "- Verify all test cases pass" >> test-report.md
-          echo "- Check execution logs for errors" >> test-report.md
-          echo "" >> test-report.md
-          echo "### 📁 Test Files" >> test-report.md
-          ls -la test/ >> test-report.md
+          echo "## Code Quality Report" > quality-report.md
+          echo "" >> quality-report.md
+          echo "### ✅ Automated Quality Checks Passed" >> quality-report.md
+          echo "- Project structure validated" >> quality-report.md
+          echo "- Test files structure validated" >> quality-report.md
+          echo "- Code syntax checked" >> quality-report.md
+          echo "- Production code quality verified" >> quality-report.md
+          echo "- Configuration files validated" >> quality-report.md
+          echo "" >> quality-report.md
+          echo "### 📋 Manual Testing Required" >> quality-report.md
+          echo "Execute \`runAllTests()\` in Google Apps Script Editor" >> quality-report.md
+          echo "See LOCAL_TEST_GUIDE.md for detailed instructions" >> quality-report.md
+          echo "" >> quality-report.md
+          echo "### 📁 File Structure" >> quality-report.md
+          echo "\`\`\`" >> quality-report.md
+          find . -name "*.gs" -not -path "./.git/*" | sort >> quality-report.md
+          echo "\`\`\`" >> quality-report.md
 
-      - name: Upload test report
+      - name: Upload quality report
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
-          path: test-report.md
+          name: quality-report
+          path: quality-report.md
 
       - name: Validate code syntax
         run: |
