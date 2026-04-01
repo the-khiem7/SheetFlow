@@ -75,17 +75,17 @@ const SortService = {
   },
 
   /**
-   * Compares priority values (High > Medium > Low, ascending)
+   * Compares priority values (Cao > Trung bình > Thấp, ascending)
    * @param {string} a - Priority A
    * @param {string} b - Priority B
    * @returns {number} - Comparison result
    */
   _comparePriority(a, b) {
-    const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+    const priorityOrder = { 'Cao': 3, 'Trung bình': 2, 'Thấp': 1 };
 
     const valA = priorityOrder[String(a).trim()] || 0;
     const valB = priorityOrder[String(b).trim()] || 0;
 
-    return valB - valA; // Ascending (High first)
+    return valB - valA; // Ascending (Cao first)
   }
 };

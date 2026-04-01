@@ -6,12 +6,12 @@ function testSortService() {
 
   // Test data: [Project, Task, Priority, Status, Date, Note, Pinned]
   const testRows = [
-    ["Project A", "Task 1", "High", "Todo", new Date("2024-01-03"), "Note 1", false],
-    ["Project B", "Task 2", "Medium", "In Progress", new Date("2024-01-01"), "Note 2", true],
-    ["Project C", "Task 3", "Low", "Done", new Date("2024-01-02"), "Note 3", false],
-    ["Project D", "Task 4", "High", "Todo", "", "Note 4", true], // No date, pinned
-    ["Project E", "Task 5", "Medium", "Todo", "", "Note 5", false], // No date, unpinned
-    ["Project F", "Task 6", "Low", "Todo", new Date("2024-01-03"), "Note 6", false]
+    ["Project A", "Task 1", "Cao", "Todo", new Date("2024-01-03"), "Note 1", false],
+    ["Project B", "Task 2", "Trung bình", "In Progress", new Date("2024-01-01"), "Note 2", true],
+    ["Project C", "Task 3", "Thấp", "Done", new Date("2024-01-02"), "Note 3", false],
+    ["Project D", "Task 4", "Cao", "Todo", "", "Note 4", true], // No date, pinned
+    ["Project E", "Task 5", "Trung bình", "Todo", "", "Note 5", false], // No date, unpinned
+    ["Project F", "Task 6", "Thấp", "Todo", new Date("2024-01-03"), "Note 6", false]
   ];
 
   const sorted = SortService.sortRows(testRows);
@@ -24,12 +24,12 @@ function testSortService() {
 
   // Expected order: Pinned first (by date desc), then unpinned (by date desc)
   // Within same date/no date groups: status asc, priority asc, project asc, task asc
-  // 1. Pinned no date (Task 4)
-  // 2. Pinned with date 2024-01-01 (Task 2)
-  // 3. Unpinned no date (Task 5)
-  // 4. Unpinned 2024-01-02 (Task 3)
-  // 5. Unpinned 2024-01-03 (Task 1 - Todo/High)
-  // 6. Unpinned 2024-01-03 (Task 6 - Todo/Low)
+  // 1. Pinned no date (Task 4 - 1.Cao)
+  // 2. Pinned with date 2024-01-01 (Task 2 - 2.Trung bình)
+  // 3. Unpinned no date (Task 5 - 2.Trung bình)
+  // 4. Unpinned 2024-01-02 (Task 3 - 3.Thấp)
+  // 5. Unpinned 2024-01-03 (Task 1 - 1.Cao)
+  // 6. Unpinned 2024-01-03 (Task 6 - 3.Thấp)
 
   const expectedProjects = ["Project D", "Project B", "Project E", "Project C", "Project A", "Project F"];
   const actualProjects = sorted.map(row => row[0]);
