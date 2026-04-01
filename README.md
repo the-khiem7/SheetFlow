@@ -8,8 +8,9 @@ SheetFlow turns Google Sheets into a lightweight task manager with automated sor
 
 ## Features
 
-- **Auto-sort** — Backlogs automatically sort by date, status, priority, and project when you edit
-- **Visual grouping** — Date borders separate tasks into clean visual blocks
+- **Task Pinning** — Pin important tasks to keep them at the top of your list
+- **Smart Auto-sort** — Backlogs automatically sort with pinned tasks first, then by date (newest first), priority, and project
+- **Visual grouping** — Borders separate pinned from unpinned tasks, and date groups within each section
 - **Daily Report** — Tasks are grouped by project and synced to a Daily Report sheet
 - **Finished tracking** — Completed tasks are filtered and displayed separately
 - **Concurrency safe** — LockService prevents conflicts during rapid edits
@@ -67,14 +68,25 @@ flowchart LR
 
 ### Backlogs
 
-| Column | Field     |
-|--------|-----------|
-| A      | Project   |
-| B      | Task      |
-| C      | Priority  |
-| D      | Status    |
-| E      | Work Date |
-| F      | Note      |
+| Column | Field     | Description |
+|--------|-----------|-------------|
+| A      | Project   | Project name |
+| B      | Task      | Task description |
+| C      | Priority  | High/Medium/Low |
+| D      | Status    | Todo/In Progress/Done |
+| E      | Work Date | Date for the work |
+| F      | Note      | Additional notes |
+| G      | Pinned    | ✓ Check to pin task to top |
+
+### Task Pinning
+
+Tasks are sorted with this priority:
+1. **Pinned tasks first** (those with ✓ in column G)
+2. **Date descending** within pinned/unpinned groups (newest first)
+3. **Priority ascending** for tasks with same date
+4. **Project ascending** as final tiebreaker
+
+**Visual grouping**: Borders separate pinned from unpinned sections, and date groups within each section.
 
 ### Daily Report
 

@@ -3,7 +3,7 @@ const CONFIG = {
     SHEET_NAME: "Backlogs",
     START_ROW: 3,
     START_COL: 1,
-    NUM_COLS: 6,
+    NUM_COLS: 7,
     SORT_RULES: [
       { column: 5, ascending: false }, // Date
       { column: 4, ascending: false }, // Status
