@@ -10,7 +10,7 @@ SheetFlow turns Google Sheets into a lightweight task manager with automated sor
 
 - **Task Pinning** — Pin important tasks to keep them at the top of your list
 - **Smart Auto-sort** — Backlogs automatically sort with pinned tasks first, then by date (newest first), priority, and project
-- **Visual grouping** — Borders separate pinned from unpinned tasks, and date groups within each section
+- **Visual grouping** — Borders separate pinned tasks from unpinned tasks, tasks without dates from dated tasks, and different date groups
 - **Daily Report** — Tasks are grouped by project and synced to a Daily Report sheet
 - **Finished tracking** — Completed tasks are filtered and displayed separately
 - **Concurrency safe** — LockService prevents conflicts during rapid edits
@@ -86,7 +86,10 @@ Tasks are sorted with this priority:
 3. **Priority ascending** for tasks with same date
 4. **Project ascending** as final tiebreaker
 
-**Visual grouping**: Borders separate pinned from unpinned sections, and date groups within each section.
+**Visual grouping**: Borders visually separate:
+- Pinned tasks from unpinned tasks
+- Tasks without dates from tasks with dates
+- Different date groups within dated tasks
 
 ### Daily Report
 

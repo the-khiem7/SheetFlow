@@ -30,6 +30,11 @@ function runAllTests() {
     testBacklogServiceIntegration();
     console.log("   ✅ BacklogService integration test passed\n");
 
+    // Test 6: Improved border logic
+    console.log("6. Testing improved border logic...");
+    testImprovedBorders();
+    console.log("   ✅ Improved border logic test passed\n");
+
     console.log("🎉 All tests passed! Implementation is ready for deployment.");
 
   } catch (error) {
@@ -110,4 +115,46 @@ function testBacklogServiceIntegration() {
       throw new Error(`BacklogService.${method} should be a function`);
     }
   });
+}
+
+// Test for improved border logic
+function testImprovedBorders() {
+  // Test data matching the sorting order
+  const testTasks = [
+    ["P1", "Pinned Task 1", "High", "Todo", new Date("2024-01-01"), "Note1", true],  // PINNED
+    ["P2", "Pinned Task 2", "Low", "Done", "", "Note2", true],                    // PINNED
+    ["P3", "No Date Task", "Medium", "In Progress", "", "Note3", false],          // NO_DATE
+    ["P4", "Dated Task 1", "High", "Todo", new Date("2024-01-02"), "Note4", false], // DATED_2024-01-02
+    ["P5", "Dated Task 2", "Low", "Done", new Date("2024-01-02"), "Note5", false],  // DATED_2024-01-02
+    ["P6", "Dated Task 3", "Medium", "Todo", new Date("2024-01-01"), "Note6", false] // DATED_2024-01-01
+  ];
+
+  const expectedGroups = [
+    'PINNED',      // Pinned Task 1
+    'PINNED',      // Pinned Task 2
+    'NO_DATE',     // No Date Task
+    'DATED_2024-01-02', // Dated Task 1
+    'DATED_2024-01-02', // Dated Task 2
+    'DATED_2024-01-01'  // Dated Task 3
+  ];
+
+  const actualGroups = testTasks.map(task => FormatService._getTaskGroup(task));
+
+  if (JSON.stringify(expectedGroups) !== JSON.stringify(actualGroups)) {
+    throw new Error(`Group classification failed. Expected: ${JSON.stringify(expectedGroups)}, Got: ${JSON.stringify(actualGroups)}`);
+  }
+
+  // Test border logic - borders should be at transitions
+  const expectedBorders = [false, true, true, false, true]; // Borders after rows 2, 3, 5
+
+  for (let i = 1; i < testTasks.length; i++) {
+    const prevGroup = FormatService._getTaskGroup(testTasks[i-1]);
+    const currentGroup = FormatService._getTaskGroup(testTasks[i]);
+    const shouldBorder = prevGroup !== currentGroup;
+    const expected = expectedBorders[i-1];
+
+    if (shouldBorder !== expected) {
+      throw new Error(`Border logic failed at transition ${i}: expected ${expected}, got ${shouldBorder} (${prevGroup} -> ${currentGroup})`);
+    }
+  }
 }
