@@ -23,12 +23,13 @@ function testSortService() {
   sorted.forEach((row, i) => console.log(`${i}: ${row[0]} - ${row[1]} - ${row[6] ? 'PINNED' : 'unpinned'} - ${row[4] || 'no date'}`));
 
   // Expected order: Pinned first (by date desc), then unpinned (by date desc)
+  // Within same date/no date groups: status asc, priority asc, project asc, task asc
   // 1. Pinned no date (Task 4)
   // 2. Pinned with date 2024-01-01 (Task 2)
   // 3. Unpinned no date (Task 5)
   // 4. Unpinned 2024-01-02 (Task 3)
-  // 5. Unpinned 2024-01-03 (Task 1)
-  // 6. Unpinned 2024-01-03 (Task 6)
+  // 5. Unpinned 2024-01-03 (Task 1 - Todo/High)
+  // 6. Unpinned 2024-01-03 (Task 6 - Todo/Low)
 
   const expectedProjects = ["Project D", "Project B", "Project E", "Project C", "Project A", "Project F"];
   const actualProjects = sorted.map(row => row[0]);

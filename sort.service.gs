@@ -22,10 +22,14 @@ const SortService = {
 
       // Empty dates sort before filled dates within their pinned/unpinned group
       if (!dateA && !dateB) {
-        // Both empty, sort by priority asc, then project asc
+        // Both empty, sort by status asc, priority asc, project asc, task asc
+        const statusCompare = String(a[3]).localeCompare(String(b[3]));
+        if (statusCompare !== 0) return statusCompare;
         const priorityCompare = this._comparePriority(a[2], b[2]);
         if (priorityCompare !== 0) return priorityCompare;
-        return a[0].localeCompare(b[0]);
+        const projectCompare = a[0].localeCompare(b[0]);
+        if (projectCompare !== 0) return projectCompare;
+        return a[1].localeCompare(b[1]);
       }
 
       if (!dateA) return -1; // Empty date comes first
@@ -34,10 +38,14 @@ const SortService = {
       const dateCompare = dateB.localeCompare(dateA); // Descending
       if (dateCompare !== 0) return dateCompare;
 
-      // Same date: priority asc, then project asc
+      // Same date: status asc, priority asc, project asc, task asc
+      const statusCompare = String(a[3]).localeCompare(String(b[3]));
+      if (statusCompare !== 0) return statusCompare;
       const priorityCompare = this._comparePriority(a[2], b[2]);
       if (priorityCompare !== 0) return priorityCompare;
-      return a[0].localeCompare(b[0]);
+      const projectCompare = a[0].localeCompare(b[0]);
+      if (projectCompare !== 0) return projectCompare;
+      return a[1].localeCompare(b[1]);
     });
   },
 
@@ -67,7 +75,7 @@ const SortService = {
   },
 
   /**
-   * Compares priority values (High > Medium > Low)
+   * Compares priority values (High > Medium > Low, ascending)
    * @param {string} a - Priority A
    * @param {string} b - Priority B
    * @returns {number} - Comparison result
@@ -78,6 +86,6 @@ const SortService = {
     const valA = priorityOrder[String(a).trim()] || 0;
     const valB = priorityOrder[String(b).trim()] || 0;
 
-    return valA - valB; // Ascending
+    return valB - valA; // Ascending (High first)
   }
 };
