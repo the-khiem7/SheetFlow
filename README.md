@@ -139,6 +139,27 @@ See [docs/CICD.md](docs/CICD.md) for full setup guide.
 └── docs/                 # Documentation
 ```
 
+## Testing & Quality
+
+### Local Testing
+```bash
+# Setup
+clasp login
+cp .clasp.json.example .clasp.json
+# Edit .clasp.json với scriptId
+
+# Deploy & test
+clasp push
+clasp open
+
+# Run tests trong Apps Script Editor
+# → test/test.runner.gs → runAllTests()
+```
+
+### CI Pipeline
+- **Test CI**: Chạy trên PR/push - validate code quality
+- **Deploy CD**: Chỉ chạy trên main - deploy to Apps Script
+
 ## Documentation
 
 | Doc | Description |
@@ -148,6 +169,8 @@ See [docs/CICD.md](docs/CICD.md) for full setup guide.
 | [Roadmap](docs/ROADMAP.md) | Development phases and task checklist |
 | [CI/CD](docs/CICD.md) | GitHub Actions + clasp deployment |
 | [Agents](docs/AGENTS.md) | Conventions for coding agents |
+| [Local Testing](LOCAL_TEST_GUIDE.md) | How to run tests locally |
+| [Test Automation](test/AUTOMATION_GUIDE.md) | Advanced testing strategies |
 
 ## License
 
