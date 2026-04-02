@@ -9,12 +9,25 @@ This document explains how to set up the GitHub Actions workflow for automatic A
 #### 1. `CLASP_CREDENTIALS`
 Google Service Account credentials for clasp authentication.
 
-**How to get it:**
+**How to get it (Recommended - Service Account):**
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new Service Account or use existing one
 3. Generate JSON key
 4. Copy the entire JSON content
 5. Paste as `CLASP_CREDENTIALS` secret
+
+**Alternative (OAuth - from docs/CICD.md):**
+```bash
+# Login with clasp
+clasp login --no-localhost
+
+# Get credentials from file
+cat ~/.clasprc.json  # Linux/Mac
+# or
+type %USERPROFILE%\.clasprc.json  # Windows
+
+# Copy entire JSON content to CLASP_CREDENTIALS secret
+```
 
 #### 2. `SCRIPT_ID`
 Your Google Apps Script project ID.
