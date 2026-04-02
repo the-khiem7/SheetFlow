@@ -38,20 +38,29 @@ flowchart TD
     end
 
     subgraph Apps Script Backend
-        EH[onEdit Handler]
+        MAIN[app/main.gs]
+        DE[DesktopEntry]
+        AE[ApiEntry]
         BS[BacklogService]
-        FS[FormatService]
         DRS[DailyReportService]
-        U[Utils]
+        AR[ApiRouter]
+        REP[Repositories]
+        DOM[Domain]
     end
 
-    BL -- user edit --> EH
-    EH --> BS
-    BS --> FS
-    BS --> DRS
+    BL -- desktop edit --> MAIN
+    MAIN --> DE
+    DE --> BS
+    DE --> DRS
+    BS --> REP
+    BS --> DOM
+    DRS --> REP
+    DRS --> DOM
     DRS --> DR
-    BS -.-> U
-    DRS -.-> U
+
+    AE --> AR
+    AR --> REP
+    AR --> DOM
 ```
 
 ## Deployment Pipeline
@@ -59,7 +68,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     LC[Local Code] -->|git push| GH[GitHub]
-    GH -->|GitHub Actions| CL[clasp push]
+    GH -->|GitHub Actions| CL[SheetFlow.AppScript/clasp push]
     CL -->|deploy| AS[Apps Script]
     AS -->|runs on| GS[Google Sheets]
 ```
@@ -131,14 +140,13 @@ See [docs/CICD.md](docs/CICD.md) for full setup guide.
 │   ├── appsscript.json
 │   ├── .clasp.json.example
 │   ├── src/
-│   │   ├── config.gs
-│   │   ├── utils.gs
-│   │   ├── sort.service.gs
-│   │   ├── format.service.gs
-│   │   ├── backlog.service.gs
-│   │   ├── dailyreport.service.gs
-│   │   ├── api.service.gs
-│   │   └── main.gs
+│   │   ├── app/             # Global Apps Script entrypoints
+│   │   ├── api/             # Flutter-facing HTTP modules
+│   │   ├── config/          # App config + sheet schema
+│   │   ├── domain/          # Pure/domain-oriented logic
+│   │   ├── repositories/    # Spreadsheet + script properties access
+│   │   ├── services/        # Desktop orchestration use cases
+│   │   └── shared/          # Utils, logging, response helpers
 │   └── test/
 │       ├── test.runner.gs
 │       ├── sort.service.test.gs
@@ -161,8 +169,11 @@ cp .clasp.json.example .clasp.json
 clasp push
 clasp open
 
-# Run tests trong Apps Script Editor
-# → test/test.runner.gs → runAllTests()
+# Test files không được push mặc định.
+# Muốn chạy test trong Apps Script Editor:
+# 1. tạm thêm test/*.gs vào .clasp.json
+# 2. clasp push
+# 3. chạy runAllTests()
 ```
 
 ### CI Pipeline
@@ -174,7 +185,7 @@ clasp open
 | Doc | Description |
 |-----|-------------|
 | [Overview](docs/OVERVIEW.md) | Project introduction and background |
-| [Architecture](docs/ARCHITECTURE.md) | Service-layer design and data flow |
+| [Architecture](docs/ARCHITECTURE.md) | Layered architecture and data flow |
 | [Roadmap](docs/ROADMAP.md) | Development phases and task checklist |
 | [CI/CD](docs/CICD.md) | GitHub Actions + clasp deployment |
 | [Agents](docs/AGENTS.md) | Conventions for coding agents |
