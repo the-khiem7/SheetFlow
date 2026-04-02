@@ -8,7 +8,7 @@ on:
       - 'docs/**'
       - 'README.md'
       - '.gitignore'
-
+  workflow_dispatch:
 jobs:
   deploy:
     runs-on: ubuntu-latest
