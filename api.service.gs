@@ -431,47 +431,76 @@ const ApiService = {
   },
 
   // Get daily report data
-  getDailyReport(params) {
+  getDailyReport(params, requestId) {
+    Logger.log('📊 [' + requestId + '] Starting getDailyReport');
+
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.DAILY.SHEET_NAME);
-    if (!sheet) return this.errorResponse('Daily Report sheet not found');
+    Logger.log('📊 [' + requestId + '] Daily sheet access result: ' + (sheet ? 'SUCCESS' : 'FAILED'));
+    if (!sheet) {
+      Logger.log('❌ [' + requestId + '] Daily Report sheet not found');
+      return this.errorResponse('Daily Report sheet not found', requestId);
+    }
 
     const cfg = CONFIG.DAILY;
     const lastRow = sheet.getLastRow();
-    if (lastRow < cfg.START_ROW) return this.successResponse([]);
+    Logger.log('📊 [' + requestId + '] Last row: ' + lastRow + ', START_ROW: ' + cfg.START_ROW);
 
-    const dateRange = sheet.getRange(cfg.START_ROW, cfg.DATE_COL, lastRow - cfg.START_ROW + 1, 1);
-    const goalsRange = sheet.getRange(cfg.START_ROW, cfg.GOALS_COL, lastRow - cfg.START_ROW + 1, 1);
-    const finishedRange = sheet.getRange(cfg.START_ROW, cfg.FINISHED_COL, lastRow - cfg.START_ROW + 1, 1);
-
-    const dates = dateRange.getValues();
-    const goals = goalsRange.getValues();
-    const finished = finishedRange.getValues();
-
-    const reports = [];
-
-    for (let i = 0; i < dates.length; i++) {
-      if (!dates[i][0]) continue;
-
-      reports.push({
-        date: dates[i][0].toISOString().split('T')[0],
-        goals: goals[i][0] || '',
-        finished: finished[i][0] || ''
-      });
+    if (lastRow < cfg.START_ROW) {
+      Logger.log('ℹ️ [' + requestId + '] No data in daily report sheet, returning empty array');
+      return this.successResponse([], requestId);
     }
 
-    return this.successResponse(reports);
+    try {
+      const dateRange = sheet.getRange(cfg.START_ROW, cfg.DATE_COL, lastRow - cfg.START_ROW + 1, 1);
+      const goalsRange = sheet.getRange(cfg.START_ROW, cfg.GOALS_COL, lastRow - cfg.START_ROW + 1, 1);
+      const finishedRange = sheet.getRange(cfg.START_ROW, cfg.FINISHED_COL, lastRow - cfg.START_ROW + 1, 1);
+
+      const dates = dateRange.getValues();
+      const goals = goalsRange.getValues();
+      const finished = finishedRange.getValues();
+
+      Logger.log('📊 [' + requestId + '] Retrieved ranges: dates=' + dates.length + ', goals=' + goals.length + ', finished=' + finished.length);
+
+      const reports = [];
+      let processedRows = 0;
+      let validRows = 0;
+
+      for (let i = 0; i < dates.length; i++) {
+        processedRows++;
+        if (!dates[i][0]) continue;
+
+        validRows++;
+        reports.push({
+          date: dates[i][0].toISOString().split('T')[0],
+          goals: goals[i][0] || '',
+          finished: finished[i][0] || ''
+        });
+      }
+
+      Logger.log('📊 [' + requestId + '] Processing summary: processed=' + processedRows + ', valid=' + validRows + ', returned=' + reports.length);
+      Logger.log('✅ [' + requestId + '] getDailyReport completed successfully');
+
+      return this.successResponse(reports, requestId);
+    } catch (e) {
+      Logger.log('❌ [' + requestId + '] Error accessing daily report ranges: ' + e.toString());
+      return this.errorResponse('Failed to read daily reports', requestId);
+    }
   },
 
   // Helper methods
-  successResponse(data, statusCode = 200) {
+  successResponse(data, requestId, statusCode = 200) {
+    const response = { data: data };
+    Logger.log('✅ [' + requestId + '] Success response: ' + JSON.stringify(response));
     return ContentService
-      .createTextOutput(JSON.stringify({ data: data }))
+      .createTextOutput(JSON.stringify(response))
       .setMimeType(ContentService.MimeType.JSON);
   },
 
-  errorResponse(message, statusCode = 400) {
+  errorResponse(message, requestId, statusCode = 400) {
+    const response = { error: message };
+    Logger.log('❌ [' + requestId + '] Error response: ' + JSON.stringify(response));
     return ContentService
-      .createTextOutput(JSON.stringify({ error: message }))
+      .createTextOutput(JSON.stringify(response))
       .setMimeType(ContentService.MimeType.JSON);
   }
 };
