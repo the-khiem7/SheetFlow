@@ -70,7 +70,7 @@ jobs:
 
       - name: Validate deployment
         run: |
-          DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+          DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.DEPLOYMENT_ID }}/exec"
           RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
           HTTP_CODE=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
           BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
