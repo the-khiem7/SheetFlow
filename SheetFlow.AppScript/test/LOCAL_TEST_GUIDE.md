@@ -17,13 +17,14 @@ npm install -g @google/clasp
 clasp login
 
 # Setup .clasp.json (copy từ template)
+cd SheetFlow.AppScript
 cp .clasp.json.example .clasp.json
 # Edit .clasp.json với scriptId thật
 ```
 
 ### Bước 2: Push code lên Apps Script
 ```bash
-# Push tất cả files (bao gồm test)
+# Push source mặc định (không bao gồm test/)
 clasp push
 ```
 
@@ -35,9 +36,11 @@ clasp open
 
 ### Bước 4: Chạy test trong Apps Script Editor
 
-1. **Mở file `test/test.runner.gs`**
-2. **Chạy function `runAllTests()`**
-3. **Xem kết quả trong Execution Log** (View → Logs)
+1. **Tạm thời thêm các file `test/*.gs` vào `.clasp.json` hoặc dùng một Apps Script test project riêng**
+2. **Push lại code test**
+3. **Mở file `test/test.runner.gs`**
+4. **Chạy function `runAllTests()`**
+5. **Xem kết quả trong Execution Log** (View → Logs)
 
 ### Ví dụ kết quả test thành công:
 ```

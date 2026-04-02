@@ -114,8 +114,9 @@ Tasks are sorted with this priority:
 1. Clone the repo
 2. Install clasp: `npm install -g @google/clasp`
 3. Login: `clasp login`
-4. Link your Apps Script project: update `scriptId` in `.clasp.json`
-5. Push: `clasp push`
+4. Go to `SheetFlow.AppScript/`
+5. Link your Apps Script project: update `scriptId` in `.clasp.json`
+6. Push: `clasp push`
 
 ## Deployment
 
@@ -126,17 +127,24 @@ See [docs/CICD.md](docs/CICD.md) for full setup guide.
 ## Project Structure
 
 ```
-├── /test/                 # Test files (local only, not deployed)
-│   ├── test.runner.gs     # Main test runner
-│   ├── sort.service.test.gs
-│   └── border.test.gs
-├── config.gs             # Configuration constants
-├── utils.gs              # Utility functions
-├── format.service.gs     # Border and formatting logic
-├── backlog.service.gs    # Task management service
-├── dailyreport.service.gs # Report generation service
-├── main.gs               # Apps Script entry points
-└── docs/                 # Documentation
+├── SheetFlow.AppScript/
+│   ├── appsscript.json
+│   ├── .clasp.json.example
+│   ├── src/
+│   │   ├── config.gs
+│   │   ├── utils.gs
+│   │   ├── sort.service.gs
+│   │   ├── format.service.gs
+│   │   ├── backlog.service.gs
+│   │   ├── dailyreport.service.gs
+│   │   ├── api.service.gs
+│   │   └── main.gs
+│   └── test/
+│       ├── test.runner.gs
+│       ├── sort.service.test.gs
+│       └── border.test.gs
+├── SheetFlow.FlutterMobile/ # Flutter mobile client
+└── docs/                    # Documentation
 ```
 
 ## Testing & Quality
@@ -144,6 +152,7 @@ See [docs/CICD.md](docs/CICD.md) for full setup guide.
 ### Local Testing
 ```bash
 # Setup
+cd SheetFlow.AppScript
 clasp login
 cp .clasp.json.example .clasp.json
 # Edit .clasp.json với scriptId
@@ -169,8 +178,8 @@ clasp open
 | [Roadmap](docs/ROADMAP.md) | Development phases and task checklist |
 | [CI/CD](docs/CICD.md) | GitHub Actions + clasp deployment |
 | [Agents](docs/AGENTS.md) | Conventions for coding agents |
-| [Local Testing](LOCAL_TEST_GUIDE.md) | How to run tests locally |
-| [Test Automation](test/AUTOMATION_GUIDE.md) | Advanced testing strategies |
+| [Local Testing](SheetFlow.AppScript/test/LOCAL_TEST_GUIDE.md) | How to run tests locally |
+| [Test Automation](SheetFlow.AppScript/test/AUTOMATION_GUIDE.md) | Advanced testing strategies |
 
 ## License
 

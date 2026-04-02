@@ -42,7 +42,7 @@ Daily Report Sheet (Materialized View)
 ## Deployment
 
 ```
-git push → GitHub Actions → clasp push → Apps Script updated
+git push → GitHub Actions → SheetFlow.AppScript/clasp push → Apps Script updated
 ```
 
 ## Nguồn gốc

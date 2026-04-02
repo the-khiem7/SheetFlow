@@ -4,14 +4,19 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
-      - '.gitignore'
+    paths:
+      - 'SheetFlow.AppScript/**'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/test.yml'
   workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SheetFlow.AppScript
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -24,115 +29,83 @@ jobs:
       - name: Install dependencies
         run: |
           npm install -g @google/clasp
-          sudo apt-get update && sudo apt-get install -y jq
+          sudo apt-get update
+          sudo apt-get install -y jq
 
       - name: Setup clasp credentials
-        run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+        run: |
+          echo "Setting up clasp credentials..."
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+          if ! jq empty ~/.clasprc.json >/dev/null 2>&1; then
+            echo "CLASP_CREDENTIALS is not valid JSON"
+            exit 1
+          fi
 
       - name: Generate .clasp.json from template
         run: |
-          # Use jq to safely replace scriptId in JSON
           jq --arg scriptId "${{ secrets.SCRIPT_ID }}" '.scriptId = $scriptId' .clasp.json.example > .clasp.json
 
-          # Validate generated JSON
-          if ! jq empty .clasp.json; then
-            echo "❌ Generated .clasp.json is invalid JSON"
+          if ! jq empty .clasp.json >/dev/null 2>&1; then
+            echo "Generated .clasp.json is invalid JSON"
             exit 1
           fi
-
-          echo "✅ Generated .clasp.json is valid JSON"
 
       - name: Push to Apps Script
         run: |
-          echo "📁 Listing files to push:"
+          echo "Listing files to push:"
           clasp status
 
-          echo "🚀 Pushing to Apps Script..."
+          echo "Pushing to Apps Script..."
           clasp push
 
-          echo "✅ Code push completed successfully"
-
-      - name: Deploy Web App (Update Existing Deployment)
+      - name: Deploy Web App
         run: |
-          echo "🔧 Starting deployment update..."
-
-          # Check if DEPLOYMENT_ID is provided
           if [ -z "${{ secrets.DEPLOYMENT_ID }}" ]; then
-            echo "❌ DEPLOYMENT_ID secret is not set"
+            echo "DEPLOYMENT_ID secret is not set"
             exit 1
           fi
 
-          echo "📦 Updating deployment: ${{ secrets.DEPLOYMENT_ID }}"
+          clasp deploy --deploymentId "${{ secrets.DEPLOYMENT_ID }}"
 
-          # Update existing deployment (fixed URL approach)
-          clasp deploy --deploymentId ${{ secrets.DEPLOYMENT_ID }}
-
-           echo "✅ Deployment update completed successfully"
-           echo "🔗 Web App URL remains fixed:"
-           echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
-
-      - name: Validate Deployment
+      - name: Validate deployment
         run: |
-           echo "🧪 Validating deployment..."
+          DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
+          HTTP_CODE=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
 
-           DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+          echo "HTTP Status: $HTTP_CODE"
 
-           echo "🔗 Testing URL: $DEPLOY_URL"
+          if [ "$HTTP_CODE" -eq 404 ]; then
+            echo "Deployment URL is invalid: $DEPLOY_URL"
+            exit 1
+          fi
 
-           # Test 1: Basic connectivity (no auth - should get auth error, not 404)
-           echo "📡 Test 1: Basic connectivity check"
-           RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
-           HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-           BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "Deployment is accessible"
+            echo "Response preview: ${BODY:0:100}..."
+          elif [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
+            echo "Deployment exists and requires auth"
+          else
+            echo "Unexpected response: $HTTP_CODE"
+            echo "Response: ${BODY:0:200}..."
+          fi
 
-           echo "📊 HTTP Status: $HTTP_CODE"
+          if [ -n "${{ secrets.API_KEY }}" ]; then
+            AUTH_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -H "X-API-Key: ${{ secrets.API_KEY }}" \
+              "$DEPLOY_URL?path=tasks")
 
-           if [ "$HTTP_CODE" -eq 404 ]; then
-             echo "❌ CRITICAL: 404 Not Found - Deployment URL is invalid!"
-             echo "This indicates:"
-             echo "  - SCRIPT_ID secret is wrong"
-             echo "  - Deployment is not a web app (might be library)"
-             echo "  - Deployment was deleted or expired"
-             echo ""
-             echo "🔧 Troubleshooting steps:"
-             echo "  1. Check SCRIPT_ID matches: https://script.google.com/macros/s/[SCRIPT_ID]/exec"
-             echo "  2. Verify deployment type is 'Web app', not 'Library'"
-             echo "  3. Check deployment is active in Apps Script Editor"
-             exit 1
-           elif [ "$HTTP_CODE" -eq 200 ]; then
-             echo "✅ Deployment is accessible (200 OK)"
-             echo "📄 Response preview: ${BODY:0:100}..."
-           elif [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
-             echo "✅ Deployment exists (auth required: $HTTP_CODE)"
-             echo "This is expected - API requires X-API-Key header"
-           else
-             echo "⚠️ Unexpected response: $HTTP_CODE"
-             echo "Response: ${BODY:0:200}..."
-           fi
+            AUTH_CODE=$(echo "$AUTH_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+            AUTH_BODY=$(echo "$AUTH_RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
 
-           # Test 2: Check if API key is configured (optional)
-           if [ -n "${{ secrets.API_KEY }}" ]; then
-             echo ""
-             echo "🔑 Test 2: API authentication check"
-             AUTH_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-               -H "X-API-Key: ${{ secrets.API_KEY }}" \
-               "$DEPLOY_URL?path=tasks")
-
-             AUTH_CODE=$(echo $AUTH_RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-             AUTH_BODY=$(echo $AUTH_RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
-
-             if [ "$AUTH_CODE" -eq 200 ]; then
-               echo "✅ API authentication successful"
-               echo "📄 Tasks response: ${AUTH_BODY:0:100}..."
-             else
-               echo "⚠️ API auth test failed ($AUTH_CODE)"
-               echo "This might be normal if API key is not set in script properties"
-             fi
-           else
-             echo ""
-             echo "ℹ️ API_KEY secret not provided - skipping auth test"
-           fi
-
-           echo ""
-           echo "🎉 Deployment validation completed!"
-           echo "✅ Apps Script deployment is live and accessible"
+            if [ "$AUTH_CODE" -eq 200 ]; then
+              echo "API authentication successful"
+              echo "Tasks response: ${AUTH_BODY:0:100}..."
+            else
+              echo "API auth test failed ($AUTH_CODE)"
+            fi
+          else
+            echo "API_KEY secret not provided, skipping auth test"
+          fi

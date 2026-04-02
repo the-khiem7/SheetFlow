@@ -58,6 +58,9 @@ jobs:
   integration-test:
     needs: unit-test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SheetFlow.AppScript
     steps:
       - uses: actions/checkout@v4
       - name: Setup clasp

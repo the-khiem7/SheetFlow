@@ -26,6 +26,7 @@ clasp login
 
 Copy template và điền scriptId:
 ```bash
+cd SheetFlow.AppScript
 cp .clasp.json.example .clasp.json
 ```
 Sửa `<YOUR_SCRIPT_ID>` thành Script ID thật (lấy từ Apps Script editor → Project Settings).
@@ -63,6 +64,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SheetFlow.AppScript
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -114,10 +118,10 @@ git push
 
 ## Lưu ý bảo mật
 
-- `.clasp.json` chứa scriptId → đã gitignore, generate trong CI từ secret `SCRIPT_ID`
+- `SheetFlow.AppScript/.clasp.json` chứa scriptId → đã gitignore, generate trong CI từ secret `SCRIPT_ID`
 - `.clasprc.json` chứa access/refresh token → đã gitignore, inject trong CI từ secret `CLASP_CREDENTIALS`
 - Không bao giờ commit credentials vào repo
-- Dùng `.clasp.json.example` làm template cho developer mới
+- Dùng `SheetFlow.AppScript/.clasp.json.example` làm template cho developer mới
 
 ### Cách lấy CLASP_CREDENTIALS
 
@@ -152,8 +156,7 @@ Paste vào GitHub → Settings → Secrets → `CLASP_CREDENTIALS`.
 ```json
 {
   "scriptId": "YOUR_SCRIPT_ID",
-  "rootDir": "./"
+  "rootDir": "."
 }
 ```
-
-Nếu dùng folder `src/`, đổi `rootDir` thành `"src"`.
+Chạy các lệnh `clasp` từ thư mục `SheetFlow.AppScript/`.

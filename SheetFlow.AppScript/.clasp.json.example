@@ -1,0 +1,18 @@
+{
+  "scriptId": "<YOUR_SCRIPT_ID>",
+  "rootDir": ".",
+  "scriptExtensions": [".gs"],
+  "htmlExtensions": [".html"],
+  "jsonExtensions": [".json"],
+  "filePushOrder": [
+    "src/config.gs",
+    "src/utils.gs",
+    "src/sort.service.gs",
+    "src/format.service.gs",
+    "src/backlog.service.gs",
+    "src/dailyreport.service.gs",
+    "src/api.service.gs",
+    "src/main.gs"
+  ],
+  "skipSubdirectories": false
+}

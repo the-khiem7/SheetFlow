@@ -34,7 +34,7 @@ Your Google Apps Script project ID.
 
 **How to get it:**
 - In Apps Script Editor: **Project Settings** → **IDs** → **Script ID**
-- Or from `.clasp.json` file: `"scriptId": "your_script_id"`
+- Or from `SheetFlow.AppScript/.clasp.json` file: `"scriptId": "your_script_id"`
 
 #### 3. `DEPLOYMENT_ID` (New - for Fixed URL)
 Your web app deployment ID to maintain fixed URL.
