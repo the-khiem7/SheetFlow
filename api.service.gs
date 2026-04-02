@@ -109,44 +109,79 @@ const ApiService = {
   },
 
   // Handle tasks endpoints
-  handleTasks(method, params, body) {
+  handleTasks(method, params, body, requestId) {
+    Logger.log('🎯 [' + requestId + '] Handling tasks with method: ' + method);
+    Logger.log('📨 [' + requestId + '] Parameters: ' + JSON.stringify(params || {}));
+    Logger.log('📦 [' + requestId + '] Body present: ' + (body ? 'YES (' + body.length + ' chars)' : 'NO'));
+
     switch (method) {
       case 'GET':
-        return this.getTasks(params);
+        Logger.log('📋 [' + requestId + '] Routing to getTasks');
+        return this.getTasks(params, requestId);
       case 'POST':
-        return this.createTask(body);
+        Logger.log('➕ [' + requestId + '] Routing to createTask');
+        return this.createTask(body, requestId);
       case 'PUT':
-        return this.updateTask(params, body);
+        Logger.log('✏️ [' + requestId + '] Routing to updateTask');
+        return this.updateTask(params, body, requestId);
       case 'DELETE':
-        return this.deleteTask(params);
+        Logger.log('🗑️ [' + requestId + '] Routing to deleteTask');
+        return this.deleteTask(params, requestId);
       default:
-        return this.errorResponse('Method not allowed');
+        Logger.log('❌ [' + requestId + '] Method not allowed: ' + method);
+        return this.errorResponse('Method not allowed', requestId);
     }
   },
 
   // Handle daily report endpoint
-  handleDailyReport(method, params) {
+  handleDailyReport(method, params, requestId) {
+    Logger.log('🎯 [' + requestId + '] Handling daily report with method: ' + method);
     if (method !== 'GET') {
-      return this.errorResponse('Method not allowed');
+      Logger.log('❌ [' + requestId + '] Method not allowed for daily reports: ' + method);
+      return this.errorResponse('Method not allowed', requestId);
     }
-    return this.getDailyReport(params);
+    Logger.log('📊 [' + requestId + '] Routing to getDailyReport');
+    return this.getDailyReport(params, requestId);
   },
 
   // Get all tasks with optional filtering
-  getTasks(params) {
+  getTasks(params, requestId) {
+    Logger.log('📋 [' + requestId + '] Starting getTasks');
+    Logger.log('🔍 [' + requestId + '] Filters: status=' + (params.status || 'none') + ', project=' + (params.project || 'none'));
+
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.BACKLOGS.SHEET_NAME);
-    if (!sheet) return this.errorResponse('Backlogs sheet not found');
+    Logger.log('📊 [' + requestId + '] Sheet access result: ' + (sheet ? 'SUCCESS' : 'FAILED'));
+    if (!sheet) {
+      Logger.log('❌ [' + requestId + '] Backlogs sheet not found');
+      return this.errorResponse('Backlogs sheet not found', requestId);
+    }
 
     const cfg = CONFIG.BACKLOGS;
+    Logger.log('⚙️ [' + requestId + '] Config: START_ROW=' + cfg.START_ROW + ', START_COL=' + cfg.START_COL + ', NUM_COLS=' + cfg.NUM_COLS);
+
     const range = Utils.getDataRange(sheet, cfg.START_ROW, cfg.START_COL, cfg.NUM_COLS);
-    if (!range) return this.successResponse([]);
+    Logger.log('📍 [' + requestId + '] Data range result: ' + (range ? 'SUCCESS' : 'FAILED'));
+    if (!range) {
+      Logger.log('ℹ️ [' + requestId + '] No data range found, returning empty array');
+      return this.successResponse([], requestId);
+    }
 
     const values = range.getValues();
+    Logger.log('📊 [' + requestId + '] Retrieved ' + values.length + ' rows of data');
+
     const tasks = [];
+    let processedRows = 0;
+    let skippedRows = 0;
+    let filteredRows = 0;
 
     for (let i = 0; i < values.length; i++) {
       const row = values[i];
-      if (!row[0] && !row[1]) continue; // Skip empty rows
+      processedRows++;
+
+      if (!row[0] && !row[1]) {
+        skippedRows++;
+        continue; // Skip empty rows
+      }
 
       const task = {
         id: cfg.START_ROW + i,
@@ -160,32 +195,57 @@ const ApiService = {
       };
 
       // Apply filters if provided
-      if (params.status && task.status.toLowerCase() !== params.status.toLowerCase()) continue;
-      if (params.project && task.project.toLowerCase() !== params.project.toLowerCase()) continue;
+      if (params.status && task.status.toLowerCase() !== params.status.toLowerCase()) {
+        filteredRows++;
+        continue;
+      }
+      if (params.project && task.project.toLowerCase() !== params.project.toLowerCase()) {
+        filteredRows++;
+        continue;
+      }
 
       tasks.push(task);
     }
 
-    return this.successResponse(tasks);
+    Logger.log('📊 [' + requestId + '] Processing summary: processed=' + processedRows + ', skipped=' + skippedRows + ', filtered=' + filteredRows + ', returned=' + tasks.length);
+    Logger.log('✅ [' + requestId + '] getTasks completed successfully');
+
+    return this.successResponse(tasks, requestId);
   },
 
   // Create new task
-  createTask(body) {
-    if (!body) return this.errorResponse('Request body required');
+  createTask(body, requestId) {
+    Logger.log('➕ [' + requestId + '] Starting createTask');
+
+    if (!body) {
+      Logger.log('❌ [' + requestId + '] Request body is empty');
+      return this.errorResponse('Request body required', requestId);
+    }
+
+    Logger.log('📦 [' + requestId + '] Raw body length: ' + body.length + ' chars');
 
     let data;
     try {
       data = JSON.parse(body);
+      Logger.log('✅ [' + requestId + '] JSON parsed successfully');
+      Logger.log('📋 [' + requestId + '] Parsed data keys: ' + Object.keys(data).join(', '));
     } catch (e) {
-      return this.errorResponse('Invalid JSON');
+      Logger.log('❌ [' + requestId + '] JSON parse error: ' + e.toString());
+      Logger.log('📋 [' + requestId + '] Raw body: ' + body);
+      return this.errorResponse('Invalid JSON', requestId);
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.BACKLOGS.SHEET_NAME);
-    if (!sheet) return this.errorResponse('Backlogs sheet not found');
+    Logger.log('📊 [' + requestId + '] Sheet access result: ' + (sheet ? 'SUCCESS' : 'FAILED'));
+    if (!sheet) {
+      Logger.log('❌ [' + requestId + '] Backlogs sheet not found');
+      return this.errorResponse('Backlogs sheet not found', requestId);
+    }
 
     const cfg = CONFIG.BACKLOGS;
     const lastRow = sheet.getLastRow();
     const newRow = lastRow + 1;
+    Logger.log('📍 [' + requestId + '] Will insert at row: ' + newRow + ' (last row was: ' + lastRow + ')');
 
     // Prepare row data
     const rowData = [
@@ -198,12 +258,28 @@ const ApiService = {
       data.pinned || false
     ];
 
-    // Append to sheet
-    sheet.getRange(newRow, cfg.START_COL, 1, cfg.NUM_COLS).setValues([rowData]);
+    Logger.log('📋 [' + requestId + '] Prepared row data: ' + JSON.stringify(rowData));
+
+    try {
+      // Append to sheet
+      sheet.getRange(newRow, cfg.START_COL, 1, cfg.NUM_COLS).setValues([rowData]);
+      Logger.log('✅ [' + requestId + '] Row data written to sheet successfully');
+    } catch (e) {
+      Logger.log('❌ [' + requestId + '] Failed to write to sheet: ' + e.toString());
+      return this.errorResponse('Failed to save task', requestId);
+    }
 
     // Trigger sorting and refresh
-    BacklogService.sortManual();
-    DailyReportService.refresh();
+    try {
+      Logger.log('🔄 [' + requestId + '] Triggering BacklogService.sortManual()');
+      BacklogService.sortManual();
+      Logger.log('🔄 [' + requestId + '] Triggering DailyReportService.refresh()');
+      DailyReportService.refresh();
+      Logger.log('✅ [' + requestId + '] Services refreshed successfully');
+    } catch (e) {
+      Logger.log('⚠️ [' + requestId + '] Service refresh warning: ' + e.toString());
+      // Don't fail the request for refresh issues
+    }
 
     const task = {
       id: newRow,
@@ -211,30 +287,54 @@ const ApiService = {
       date: data.date || new Date().toISOString().split('T')[0]
     };
 
-    return this.successResponse(task, 201);
+    Logger.log('✅ [' + requestId + '] createTask completed successfully, returning task ID: ' + task.id);
+    return this.successResponse(task, requestId, 201);
   },
 
   // Update existing task
-  updateTask(params, body) {
-    const id = parseInt(params.id);
-    if (!id) return this.errorResponse('Task ID required');
+  updateTask(params, body, requestId) {
+    Logger.log('✏️ [' + requestId + '] Starting updateTask');
 
-    if (!body) return this.errorResponse('Request body required');
+    const id = parseInt(params.id);
+    Logger.log('🆔 [' + requestId + '] Task ID: ' + id);
+    if (!id) {
+      Logger.log('❌ [' + requestId + '] Task ID is missing or invalid');
+      return this.errorResponse('Task ID required', requestId);
+    }
+
+    if (!body) {
+      Logger.log('❌ [' + requestId + '] Request body is empty');
+      return this.errorResponse('Request body required', requestId);
+    }
+
+    Logger.log('📦 [' + requestId + '] Raw body length: ' + body.length + ' chars');
 
     let data;
     try {
       data = JSON.parse(body);
+      Logger.log('✅ [' + requestId + '] JSON parsed successfully');
+      Logger.log('📋 [' + requestId + '] Update data keys: ' + Object.keys(data).join(', '));
     } catch (e) {
-      return this.errorResponse('Invalid JSON');
+      Logger.log('❌ [' + requestId + '] JSON parse error: ' + e.toString());
+      Logger.log('📋 [' + requestId + '] Raw body: ' + body);
+      return this.errorResponse('Invalid JSON', requestId);
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.BACKLOGS.SHEET_NAME);
-    if (!sheet) return this.errorResponse('Backlogs sheet not found');
+    Logger.log('📊 [' + requestId + '] Sheet access result: ' + (sheet ? 'SUCCESS' : 'FAILED'));
+    if (!sheet) {
+      Logger.log('❌ [' + requestId + '] Backlogs sheet not found');
+      return this.errorResponse('Backlogs sheet not found', requestId);
+    }
 
     const cfg = CONFIG.BACKLOGS;
     const rowIndex = id - cfg.START_ROW + 1; // 1-indexed for sheet range
+    Logger.log('📍 [' + requestId + '] Calculated row index: ' + rowIndex + ' (id: ' + id + ', START_ROW: ' + cfg.START_ROW + ')');
 
-    if (rowIndex < 1) return this.errorResponse('Invalid task ID');
+    if (rowIndex < 1) {
+      Logger.log('❌ [' + requestId + '] Invalid task ID - calculated row index is negative');
+      return this.errorResponse('Invalid task ID', requestId);
+    }
 
     // Update the row
     const rowData = [
@@ -247,11 +347,27 @@ const ApiService = {
       data.pinned !== undefined ? data.pinned : false
     ];
 
-    sheet.getRange(id, cfg.START_COL, 1, cfg.NUM_COLS).setValues([rowData]);
+    Logger.log('📋 [' + requestId + '] Prepared update row data: ' + JSON.stringify(rowData));
+
+    try {
+      sheet.getRange(id, cfg.START_COL, 1, cfg.NUM_COLS).setValues([rowData]);
+      Logger.log('✅ [' + requestId + '] Row data updated successfully');
+    } catch (e) {
+      Logger.log('❌ [' + requestId + '] Failed to update sheet: ' + e.toString());
+      return this.errorResponse('Failed to update task', requestId);
+    }
 
     // Trigger sorting and refresh
-    BacklogService.sortManual();
-    DailyReportService.refresh();
+    try {
+      Logger.log('🔄 [' + requestId + '] Triggering BacklogService.sortManual()');
+      BacklogService.sortManual();
+      Logger.log('🔄 [' + requestId + '] Triggering DailyReportService.refresh()');
+      DailyReportService.refresh();
+      Logger.log('✅ [' + requestId + '] Services refreshed successfully');
+    } catch (e) {
+      Logger.log('⚠️ [' + requestId + '] Service refresh warning: ' + e.toString());
+      // Don't fail the request for refresh issues
+    }
 
     const task = {
       id: id,
@@ -264,27 +380,54 @@ const ApiService = {
       pinned: rowData[6]
     };
 
-    return this.successResponse(task);
+    Logger.log('✅ [' + requestId + '] updateTask completed successfully for task ID: ' + id);
+    return this.successResponse(task, requestId);
   },
 
   // Delete task
-  deleteTask(params) {
+  deleteTask(params, requestId) {
+    Logger.log('🗑️ [' + requestId + '] Starting deleteTask');
+
     const id = parseInt(params.id);
-    if (!id) return this.errorResponse('Task ID required');
+    Logger.log('🆔 [' + requestId + '] Task ID to delete: ' + id);
+    if (!id) {
+      Logger.log('❌ [' + requestId + '] Task ID is missing or invalid');
+      return this.errorResponse('Task ID required', requestId);
+    }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.BACKLOGS.SHEET_NAME);
-    if (!sheet) return this.errorResponse('Backlogs sheet not found');
+    Logger.log('📊 [' + requestId + '] Sheet access result: ' + (sheet ? 'SUCCESS' : 'FAILED'));
+    if (!sheet) {
+      Logger.log('❌ [' + requestId + '] Backlogs sheet not found');
+      return this.errorResponse('Backlogs sheet not found', requestId);
+    }
 
     const cfg = CONFIG.BACKLOGS;
+    Logger.log('⚙️ [' + requestId + '] Config: START_COL=' + cfg.START_COL + ', NUM_COLS=' + cfg.NUM_COLS);
 
-    // Clear the row
-    sheet.getRange(id, cfg.START_COL, 1, cfg.NUM_COLS).clear();
+    try {
+      // Clear the row
+      sheet.getRange(id, cfg.START_COL, 1, cfg.NUM_COLS).clear();
+      Logger.log('✅ [' + requestId + '] Row cleared successfully');
+    } catch (e) {
+      Logger.log('❌ [' + requestId + '] Failed to clear row: ' + e.toString());
+      return this.errorResponse('Failed to delete task', requestId);
+    }
 
     // Trigger sorting and refresh
-    BacklogService.sortManual();
-    DailyReportService.refresh();
+    try {
+      Logger.log('🔄 [' + requestId + '] Triggering BacklogService.sortManual()');
+      BacklogService.sortManual();
+      Logger.log('🔄 [' + requestId + '] Triggering DailyReportService.refresh()');
+      DailyReportService.refresh();
+      Logger.log('✅ [' + requestId + '] Services refreshed successfully');
+    } catch (e) {
+      Logger.log('⚠️ [' + requestId + '] Service refresh warning: ' + e.toString());
+      // Don't fail the request for refresh issues
+    }
 
-    return this.successResponse({ deleted: true });
+    Logger.log('✅ [' + requestId + '] deleteTask completed successfully for task ID: ' + id);
+    return this.successResponse({ deleted: true }, requestId);
   },
 
   // Get daily report data
