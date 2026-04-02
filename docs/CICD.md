@@ -1,171 +1,149 @@
-# SheetFlow — CI/CD Setup
+# SheetFlow CI/CD
 
-## Pipeline Overview
+## Mục tiêu
 
-```
-Local Dev → git commit → git push → GitHub Actions → SheetFlow.AppScript/clasp push → Apps Script updated
-```
+- Code Apps Script được quản lý trong GitHub
+- Push vào `main` sẽ chạy GitHub Actions và deploy lên Apps Script
+- Không chỉnh code trực tiếp trên Apps Script editor trừ khi debug khẩn cấp
 
-GitHub là source of truth. Không edit code trực tiếp trên Apps Script web editor.
+## Secrets cần tạo
 
-## Prerequisites
+Vào `GitHub repo -> Settings -> Secrets and variables -> Actions`, tạo 3 secrets:
 
-1. Node.js 18+
-2. clasp: `npm install -g @google/clasp`
-3. Google account với Apps Script project
+| Secret | Bắt buộc | Dùng cho | Giá trị |
+|---|---|---|---|
+| `CLASP_CREDENTIALS` | Có | `clasp push`, `clasp deploy` | Toàn bộ nội dung file `~/.clasprc.json` sau khi chạy `clasp login --no-localhost` |
+| `SCRIPT_ID` | Có | Generate `.clasp.json` trong CI | Script ID của Apps Script project |
+| `DEPLOYMENT_ID` | Có | Cập nhật web app deployment hiện có | Deployment ID của web app |
 
-## Setup lần đầu
+## Cách lấy từng secret
 
-### 1. Login clasp
+### 1. `CLASP_CREDENTIALS`
+
+Prerequisite:
+
+- Đã cài Node.js
+- Đã cài `clasp`: `npm install -g @google/clasp`
+- Đăng nhập bằng đúng Google account có quyền sửa Apps Script project
+
+Thực hiện:
 
 ```bash
-clasp login
+clasp login --no-localhost
 ```
 
-### 2. Tạo .clasp.json local
+Sau khi login xong, lấy nội dung file credentials:
 
-Copy template và điền scriptId:
+```bash
+# macOS / Linux
+cat ~/.clasprc.json
+
+# Windows PowerShell
+Get-Content $HOME\.clasprc.json
+```
+
+Copy toàn bộ JSON và lưu vào secret `CLASP_CREDENTIALS`.
+
+Lưu ý:
+
+- Không dùng service account JSON cho secret này
+- `clasp` hiện support ổn định nhất với credentials sinh ra từ `clasp login`
+- Ai có secret này có thể deploy Apps Script của bạn
+
+### 2. `SCRIPT_ID`
+
+Cách lấy:
+
+1. Mở Apps Script project
+2. Vào `Project Settings`
+3. Copy `Script ID`
+
+Hoặc nếu máy local đã cấu hình:
+
+```bash
+Get-Content SheetFlow.AppScript\.clasp.json
+```
+
+Lấy giá trị của `scriptId` và lưu vào secret `SCRIPT_ID`.
+
+### 3. `DEPLOYMENT_ID`
+
+Cách lấy:
+
+1. Mở Apps Script project
+2. Chọn `Deploy -> Manage deployments`
+3. Chọn web app deployment đang dùng
+4. Copy `Deployment ID` dạng `AKfyc...`
+
+Lưu vào secret `DEPLOYMENT_ID`.
+
+## Thiết lập local lần đầu
+
 ```bash
 cd SheetFlow.AppScript
-cp .clasp.json.example .clasp.json
-```
-Sửa `<YOUR_SCRIPT_ID>` thành Script ID thật (lấy từ Apps Script editor → Project Settings).
-
-File `.clasp.json` đã được gitignore — không bao giờ commit lên repo.
-
-### 3. Tạo GitHub Secrets
-
-Vào repo → Settings → Secrets and variables → Actions, tạo 2 secrets:
-
-| Secret | Value |
-|--------|-------|
-| `SCRIPT_ID` | Script ID từ Apps Script Project Settings |
-| `CLASP_CREDENTIALS` | Nội dung file `~/.clasprc.json` |
-
-Để lấy credentials:
-```bash
-clasp login --no-localhost
-cat ~/.clasprc.json
-```
-Copy toàn bộ JSON → paste vào secret `CLASP_CREDENTIALS`.
-
-## GitHub Actions Workflow
-
-File: `.github/workflows/deploy.yml`
-
-```yaml
-name: Deploy Apps Script
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: SheetFlow.AppScript
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: |
-          npm install -g @google/clasp
-          sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Setup clasp credentials
-        run: |
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
-
-      - name: Generate .clasp.json from template
-        run: |
-          # Use jq to safely replace scriptId in JSON
-          jq --arg scriptId "${{ secrets.SCRIPT_ID }}" '.scriptId = $scriptId' .clasp.json.example > .clasp.json
-
-      - name: Push to Apps Script
-        run: clasp push
+Copy-Item .clasp.json.example .clasp.json
 ```
 
-## Daily Workflow
+Sửa `scriptId` trong `.clasp.json` bằng Apps Script project thật của bạn.
+
+File `.clasp.json` là file local, không commit.
+
+## Quy trình deploy
+
+```text
+Local change -> git push main -> GitHub Actions -> clasp push -> clasp deploy
+```
+
+Workflow hiện nằm ở:
+
+- [.github/workflows/deploy.yml](/d:/SourceCode/PROJECTS/SheetFlow/.github/workflows/deploy.yml)
+
+## Kiểm tra trước khi push
+
+Chạy trong `SheetFlow.AppScript/`:
 
 ```bash
-# Edit code local
-git add .
-git commit -m "feat: add new feature"
-git push
-
-# GitHub Actions tự động chạy clasp push
+clasp status
+clasp push
 ```
 
-## Manual clasp commands
+Nếu local push fail thì CI cũng sẽ fail.
 
-| Command        | Mô tả                        |
-|----------------|-------------------------------|
-| `clasp login`  | Login Google account          |
-| `clasp clone`  | Clone Apps Script project     |
-| `clasp pull`   | Pull code từ Apps Script      |
-| `clasp push`   | Push code lên Apps Script     |
-| `clasp open`   | Mở Apps Script editor         |
-| `clasp status` | Xem file thay đổi             |
+## Các lệnh hay dùng
 
-## Lưu ý bảo mật
+| Command | Mục đích |
+|---|---|
+| `clasp login --no-localhost` | Lấy / refresh credentials |
+| `clasp status` | Xem file nào sẽ được push |
+| `clasp push` | Push code lên Apps Script |
+| `clasp deploy --deploymentId "<id>"` | Cập nhật deployment hiện có |
+| `clasp open` | Mở Apps Script editor |
 
-- `SheetFlow.AppScript/.clasp.json` chứa scriptId → đã gitignore, generate trong CI từ secret `SCRIPT_ID`
-- `.clasprc.json` chứa access/refresh token → đã gitignore, inject trong CI từ secret `CLASP_CREDENTIALS`
-- Không bao giờ commit credentials vào repo
-- Dùng `SheetFlow.AppScript/.clasp.json.example` làm template cho developer mới
+## Troubleshooting ngắn
 
-### Cách lấy CLASP_CREDENTIALS
+### `Request contains an invalid argument`
 
-File `~/.clasprc.json` được tạo khi bạn chạy `clasp login`. Nội dung có dạng:
+Kiểm tra theo thứ tự:
 
-```json
-{
-  "token": {
-    "access_token": "...",
-    "refresh_token": "...",
-    "client_id": "...",
-    "client_secret": "..."
-  }
-}
-```
+1. `CLASP_CREDENTIALS` có đúng là nội dung `~/.clasprc.json` không
+2. Google account dùng để login có quyền `Editor` trên Apps Script project không
+3. `SCRIPT_ID` có đúng project đang deploy không
+4. Local `clasp push` có chạy được không
 
-Nếu chưa có hoặc token hết hạn:
+### CI báo secret thiếu
+
+Kiểm tra đủ 3 secrets:
+
+- `CLASP_CREDENTIALS`
+- `SCRIPT_ID`
+- `DEPLOYMENT_ID`
+
+### Muốn rotate credentials
+
+Chạy lại:
+
 ```bash
 clasp login --no-localhost
 ```
 
-Sau đó copy toàn bộ nội dung file:
-- Linux/Mac: `cat ~/.clasprc.json`
-- Windows: `type %USERPROFILE%\.clasprc.json`
-
-Paste vào GitHub → Settings → Secrets → `CLASP_CREDENTIALS`.
-
-**Cảnh báo:** Ai có file này có thể deploy Apps Script của bạn. Không bao giờ commit, share, hay paste vào nơi công khai.
-
-## .clasp.json
-
-```json
-{
-  "scriptId": "YOUR_SCRIPT_ID",
-  "rootDir": ".",
-  "filePushOrder": [
-    "src/config/...",
-    "src/shared/...",
-    "src/domain/...",
-    "src/repositories/...",
-    "src/services/...",
-    "src/api/...",
-    "src/app/main.gs"
-  ]
-}
-```
-Chạy các lệnh `clasp` từ thư mục `SheetFlow.AppScript/`.
+Sau đó cập nhật lại secret `CLASP_CREDENTIALS`.
