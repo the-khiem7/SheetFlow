@@ -42,60 +42,60 @@ jobs:
 
           echo "✅ Generated .clasp.json is valid JSON"
 
-       - name: Push to Apps Script
-         run: |
-           echo "📁 Listing files to push:"
-           clasp status
+      - name: Push to Apps Script
+        run: |
+          echo "📁 Listing files to push:"
+          clasp status
 
-           echo "🚀 Pushing to Apps Script..."
-           clasp push
+          echo "🚀 Pushing to Apps Script..."
+          clasp push
 
-           echo "✅ Code push completed successfully"
+          echo "✅ Code push completed successfully"
 
-       - name: Deploy Web App (Update Existing Deployment)
-         run: |
-           echo "🔧 Starting deployment update..."
+      - name: Deploy Web App (Update Existing Deployment)
+        run: |
+          echo "🔧 Starting deployment update..."
 
-           # Check if DEPLOYMENT_ID is provided
-           if [ -z "${{ secrets.DEPLOYMENT_ID }}" ]; then
-             echo "❌ DEPLOYMENT_ID secret is not set"
-             exit 1
-           fi
+          # Check if DEPLOYMENT_ID is provided
+          if [ -z "${{ secrets.DEPLOYMENT_ID }}" ]; then
+            echo "❌ DEPLOYMENT_ID secret is not set"
+            exit 1
+          fi
 
-           echo "📦 Updating deployment: ${{ secrets.DEPLOYMENT_ID }}"
+          echo "📦 Updating deployment: ${{ secrets.DEPLOYMENT_ID }}"
 
-           # Update existing deployment (fixed URL approach)
-           clasp deploy --deploymentId ${{ secrets.DEPLOYMENT_ID }}
+          # Update existing deployment (fixed URL approach)
+          clasp deploy --deploymentId ${{ secrets.DEPLOYMENT_ID }}
 
-           echo "✅ Deployment update completed successfully"
-           echo "🔗 Web App URL remains fixed:"
-           echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+          echo "✅ Deployment update completed successfully"
+          echo "🔗 Web App URL remains fixed:"
+          echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
 
-       - name: Validate Deployment
-         run: |
-           echo "🧪 Validating deployment..."
+      - name: Validate Deployment
+        run: |
+          echo "🧪 Validating deployment..."
 
-           # Test if the deployment URL is accessible
-           DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+          # Test if the deployment URL is accessible
+          DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
 
-           # Basic connectivity test (should return JSON, not HTML 404)
-           RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
+          # Basic connectivity test (should return JSON, not HTML 404)
+          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
 
-           HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-           BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
+          HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
-           echo "📊 HTTP Status: $HTTP_CODE"
+          echo "📊 HTTP Status: $HTTP_CODE"
 
-           if [ "$HTTP_CODE" -eq 200 ]; then
-             echo "✅ Deployment validation passed"
-             echo "📄 Response preview: ${BODY:0:100}..."
-           elif [ "$HTTP_CODE" -eq 404 ]; then
-             echo "❌ Deployment validation failed - 404 Not Found"
-             echo "This might indicate the deployment is not properly configured"
-             exit 1
-           else
-             echo "⚠️ Unexpected HTTP status: $HTTP_CODE"
-             echo "This might be expected if the API requires specific parameters"
-           fi
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Deployment validation passed"
+            echo "📄 Response preview: ${BODY:0:100}..."
+          elif [ "$HTTP_CODE" -eq 404 ]; then
+            echo "❌ Deployment validation failed - 404 Not Found"
+            echo "This might indicate the deployment is not properly configured"
+            exit 1
+          else
+            echo "⚠️ Unexpected HTTP status: $HTTP_CODE"
+            echo "This might be expected if the API requires specific parameters"
+          fi
 
-           echo "🎉 Full deployment pipeline completed successfully!"
+          echo "🎉 Full deployment pipeline completed successfully!"
