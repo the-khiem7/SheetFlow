@@ -57,14 +57,15 @@ jobs:
           required_files=(
             "SheetFlow.AppScript/appsscript.json"
             "SheetFlow.AppScript/.clasp.json.example"
-            "SheetFlow.AppScript/src/config.gs"
-            "SheetFlow.AppScript/src/utils.gs"
-            "SheetFlow.AppScript/src/sort.service.gs"
-            "SheetFlow.AppScript/src/format.service.gs"
-            "SheetFlow.AppScript/src/backlog.service.gs"
-            "SheetFlow.AppScript/src/dailyreport.service.gs"
-            "SheetFlow.AppScript/src/api.service.gs"
-            "SheetFlow.AppScript/src/main.gs"
+            "SheetFlow.AppScript/src/config/sheet.schema.gs"
+            "SheetFlow.AppScript/src/config/app.config.gs"
+            "SheetFlow.AppScript/src/shared/utils.gs"
+            "SheetFlow.AppScript/src/domain/task.sorter.gs"
+            "SheetFlow.AppScript/src/repositories/backlog.repository.gs"
+            "SheetFlow.AppScript/src/services/backlog.service.gs"
+            "SheetFlow.AppScript/src/services/daily-report.service.gs"
+            "SheetFlow.AppScript/src/api/router.gs"
+            "SheetFlow.AppScript/src/app/main.gs"
           )
 
           for file in "${required_files[@]}"; do
@@ -114,7 +115,7 @@ jobs:
             echo "No console.log in production code"
           fi
 
-          if grep -q "const CONFIG" SheetFlow.AppScript/src/config.gs && grep -q "BACKLOGS\|DAILY" SheetFlow.AppScript/src/config.gs; then
+          if grep -q "const SheetSchema" SheetFlow.AppScript/src/config/sheet.schema.gs && grep -q "BACKLOGS\|DAILY" SheetFlow.AppScript/src/config/sheet.schema.gs; then
             echo "CONFIG structure valid"
           else
             echo "CONFIG structure issues"
