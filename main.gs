@@ -14,3 +14,12 @@ function refreshAll() {
   BacklogService.sortManual();
   DailyReportService.refresh();
 }
+
+// Web app entry points
+function doGet(e) {
+  return ApiService.doGet(e);
+}
+
+function doPost(e) {
+  return ApiService.doPost(e);
+}
