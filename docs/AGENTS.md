@@ -9,19 +9,27 @@
 5. **Daily Report group tasks theo Date → Project**
 6. **Finished tasks được filter bởi cột Status (D)**
 7. **Script phải tránh concurrency issues** — sử dụng LockService
-8. **Toàn bộ sheet structure được định nghĩa trong CONFIG** — không hardcode column index
-9. **Services không được truy cập sheet layout trực tiếp** — phải qua CONFIG
-10. **Luôn dùng Utils cho date comparison và string trimming**
+8. **Toàn bộ sheet structure được định nghĩa trong `sheet.schema.gs`** — không hardcode column index
+9. **Services và API modules không được truy cập `SpreadsheetApp` / `PropertiesService` trực tiếp** — phải qua repository layer
+10. **Luôn dùng shared/domain helpers cho date comparison, mapping, và string trimming**
 
 ## Cấu trúc code
 
-Script được tổ chức theo service-layer architecture:
+Script được tổ chức theo layered structure:
 
-```
-CONFIG → EVENT HANDLER → BacklogService → FormatService → DailyReportService → Utils
+```text
+app → api / services → repositories / domain → config / shared
 ```
 
-Khi thêm feature mới, đặt logic vào đúng service tương ứng. Không đặt business logic trong `onEdit`.
+- `app/`: global Apps Script entrypoints
+- `api/`: Flutter-facing HTTP handlers
+- `services/`: desktop Google Sheets orchestration
+- `repositories/`: lớp duy nhất truy cập Apps Script services
+- `domain/`: sorting, formatting, mapping, report building
+- `config/`: schema bảng và app constants
+- `shared/`: helper dùng chung
+
+Không đặt business logic trong `onEdit`, `doGet`, hoặc `doPost`.
 
 ## Quy ước đặt tên
 
@@ -32,7 +40,7 @@ Khi thêm feature mới, đặt logic vào đúng service tương ứng. Không 
 
 ## Data Model
 
-### Backlogs Sheet (A:F, bắt đầu từ row 3)
+### Backlogs Sheet (A:G, bắt đầu từ row 3)
 
 | Cột | Field     | Mô tả           |
 |-----|-----------|------------------|
@@ -42,6 +50,7 @@ Khi thêm feature mới, đặt logic vào đúng service tương ứng. Không 
 | D   | Status    | Ready / Finished |
 | E   | Work Date | Ngày thực hiện   |
 | F   | Note      | Ghi chú          |
+| G   | Pinned    | Đánh dấu ưu tiên |
 
 ### Daily Report Sheet (bắt đầu từ row 14)
 
@@ -56,14 +65,14 @@ Khi thêm feature mới, đặt logic vào đúng service tương ứng. Không 
 
 ## Sort Rules
 
-```javascript
-SORT_RULES = [
-  { column: 5, ascending: false },  // Work Date DESC
-  { column: 4, ascending: false },  // Status DESC
-  { column: 3, ascending: true },   // Priority ASC
-  { column: 1, ascending: true }    // Project A-Z
-]
-```
+Task được sort theo:
+
+1. `Pinned` trước
+2. `Work Date` giảm dần trong từng nhóm pinned / unpinned
+3. `Status`
+4. `Priority`
+5. `Project`
+6. `Task`
 
 ## Lưu ý quan trọng
 

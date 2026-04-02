@@ -39,6 +39,15 @@
 - [x] dailyreport.service.gs
 - [x] main.gs (event handlers + manual commands)
 
+## Phase 3.5: Layered Folder Refactor (Done)
+- [x] Tách `src/` thành `app`, `api`, `config`, `domain`, `repositories`, `services`, `shared`
+- [x] Tạo `sheet.schema.gs` làm nguồn chân lý cho schema bảng
+- [x] Đưa toàn bộ `SpreadsheetApp` access vào repository layer
+- [x] Đưa toàn bộ `PropertiesService` access vào repository layer
+- [x] Tách desktop flow khỏi Flutter API flow
+- [x] Chuẩn hóa field cột F thành `note`
+- [x] Giữ global entrypoints chỉ còn trong `src/app/main.gs`
+
 ## Phase 4: CI/CD (Done)
 - [x] GitHub Actions workflow (clasp push on main push)
 - [x] CLASP_CREDENTIALS secret setup
@@ -47,6 +56,9 @@
 - [x] .clasp.json.example template
 
 ## Phase 5: Future Enhancements
+- [ ] LockService / CacheService integration cho desktop flow
+- [ ] Validation layer riêng cho API payload
+- [ ] Dedicated DTO / serializer layer cho Flutter API
 - [ ] Auto tính Total Hours từ Check-in/Check-out
 - [ ] Auto weekly summary sheet
 - [ ] Sort project trong E/F theo priority hoặc số task

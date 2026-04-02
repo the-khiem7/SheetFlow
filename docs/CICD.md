@@ -3,7 +3,7 @@
 ## Pipeline Overview
 
 ```
-Local Dev → git commit → git push → GitHub Actions → clasp push → Apps Script updated
+Local Dev → git commit → git push → GitHub Actions → SheetFlow.AppScript/clasp push → Apps Script updated
 ```
 
 GitHub là source of truth. Không edit code trực tiếp trên Apps Script web editor.
@@ -156,7 +156,16 @@ Paste vào GitHub → Settings → Secrets → `CLASP_CREDENTIALS`.
 ```json
 {
   "scriptId": "YOUR_SCRIPT_ID",
-  "rootDir": "."
+  "rootDir": ".",
+  "filePushOrder": [
+    "src/config/...",
+    "src/shared/...",
+    "src/domain/...",
+    "src/repositories/...",
+    "src/services/...",
+    "src/api/...",
+    "src/app/main.gs"
+  ]
 }
 ```
 Chạy các lệnh `clasp` từ thư mục `SheetFlow.AppScript/`.

@@ -1,79 +1,111 @@
 # SheetFlow — Architecture
 
-## Software Architecture (Service Layer)
+## Current Structure
 
-```
-onEdit Trigger
-    ↓
-BacklogService.handleEdit()
-    ↓
-BacklogService.sortAndFormat()
-    ↓
-FormatService.applyDateBorders()
-FormatService.applyAlignment()
-    ↓
-DailyReportService.refresh()
-    ↓
-Utils (toDateKey, isSameDate, safeTrim, getDataRange)
+SheetFlow.AppScript hiện dùng layered structure bên trong `src/`:
+
+```text
+src/
+  app/           # Global Apps Script entrypoints
+  api/           # Flutter-facing HTTP modules
+  config/        # App config + sheet schema
+  domain/        # Mapping, sorting, formatting, report building
+  repositories/  # Spreadsheet / Script Properties access
+  services/      # Desktop use-case orchestration
+  shared/        # Utils, logging, response helpers
 ```
 
-## Layers
+## Client Boundaries
 
-| Layer              | Responsibility                       |
-|--------------------|--------------------------------------|
-| CONFIG             | Sheet structure, columns, constants  |
-| Event Handler      | onEdit trigger, routing              |
-| BacklogService     | Sort + format pipeline               |
-| FormatService      | Borders, alignment                   |
-| DailyReportService | Build daily report from backlogs     |
-| Utils              | Date, trim, range helpers            |
+### Desktop client
+- User thao tác trực tiếp trên Google Sheets
+- Entry points:
+  - `onEdit(e)`
+  - `refreshAll()`
+- Flow:
+  - `app/main.gs` → `DesktopEntry` → services → repositories/domain
 
-## Data Flow
+### Flutter client
+- Mobile app gọi Apps Script Web App qua HTTP
+- Entry points:
+  - `doGet(e)`
+  - `doPost(e)`
+- Flow:
+  - `app/main.gs` → `ApiEntry` → `api/router.gs` → API modules → repositories/domain
 
-```
+## Layer Responsibilities
+
+| Layer | Responsibility |
+|---|---|
+| `config/` | Định nghĩa schema bảng, cột, row offset, app constants |
+| `shared/` | Helper dùng chung như utils, logger, JSON response |
+| `domain/` | Logic gần-pure: sort task, map row ↔ object, build daily report, classify border group |
+| `repositories/` | Lớp duy nhất truy cập trực tiếp `SpreadsheetApp` và `PropertiesService` |
+| `services/` | Orchestration cho desktop use cases |
+| `api/` | Auth, route, task/report handlers cho Flutter |
+| `app/` | Hàm global Apps Script |
+
+## Data Model
+
+### Backlogs sheet
+
+| Column | Field | Meaning |
+|---|---|---|
+| A | `project` | Dự án |
+| B | `task` | Tên công việc |
+| C | `priority` | Mức độ ưu tiên |
+| D | `status` | Trạng thái |
+| E | `workDate` | Ngày thực hiện |
+| F | `note` | Ghi chú |
+| G | `pinned` | Pinned |
+
+Schema này được khóa trong `config/sheet.schema.gs` và không nên hardcode rải rác ngoài file đó.
+
+## Runtime Flow
+
+### Desktop flow
+
+```text
 User edits Backlogs
-    ↓
-onEdit(e) fires
-    ↓
-BacklogService.handleEdit(sheet, e)
-    ↓
-range.sort(CONFIG.BACKLOGS.SORT_RULES)
-    ↓
-FormatService.applyDateBorders()
-FormatService.applyAlignment()
-    ↓
+  ↓
+onEdit(e)
+  ↓
+DesktopEntry
+  ↓
+BacklogService.handleEdit()
+  ↓
+TaskSorter + BacklogFormatter + BacklogRepository
+  ↓
 DailyReportService.refresh()
-    ↓
-Daily Report updated (cột E: all tasks, cột F: finished tasks)
+  ↓
+DailyReportBuilder + DailyReportRepository
 ```
 
-## CONFIG Structure
+### Flutter API flow
 
-```javascript
-const CONFIG = {
-  BACKLOGS: {
-    SHEET_NAME: "Backlogs",
-    START_ROW: 3,
-    START_COL: 1,
-    NUM_COLS: 6,
-    SORT_RULES: [...]
-  },
-  DAILY: {
-    SHEET_NAME: "Daily Report",
-    START_ROW: 14,
-    DATE_COL: 1,
-    GOALS_COL: 5,
-    FINISHED_COL: 6
-  }
-};
+```text
+Flutter HTTP request
+  ↓
+doGet / doPost
+  ↓
+ApiEntry
+  ↓
+ApiRouter
+  ↓
+ApiAuth + ApiTasks / ApiReports
+  ↓
+Repositories + Domain
 ```
 
 ## Daily Report Generation
 
-Group by: `Date → Project → Tasks`
+Daily report vẫn group theo:
 
-Output format trong cell E/F:
-```
+`Date → Project → Tasks`
+
+Output cell format:
+
+```text
 1. Project A
 - Task 1
 - Task 2
@@ -81,31 +113,27 @@ Output format trong cell E/F:
 - Task 3
 ```
 
-Filter cho cột F: `status.toLowerCase() === "finished"`
+Cột finished vẫn lọc theo:
+
+`status.toLowerCase() === "finished"`
 
 ## Formatting Rules
 
 ### Borders
-- Khi giá trị ngày (cột E) thay đổi giữa 2 dòng → vẽ top border `SOLID_MEDIUM`
+- So sánh theo task group:
+  - `PINNED`
+  - `NO_DATE`
+  - `DATED_yyyy-MM-dd`
+- Khi group đổi giữa 2 dòng, vẽ top border `SOLID_MEDIUM`
 
 ### Alignment
-| Cột | Alignment |
-|-----|-----------|
-| A   | Center    |
-| B   | Left      |
-| C   | Center    |
-| D   | Center    |
-| E   | Center    |
-| F   | Center    |
 
-## System Behavior Mapping
-
-```
-Backlogs Sheet    = Database Table
-Daily Report      = Materialized View / Aggregated Report
-Apps Script       = Backend Service
-onEdit            = Event Trigger
-Sort              = Index
-Daily Report Gen  = ETL / Aggregation
-LockService       = Transaction Lock
-```
+| Column | Alignment |
+|---|---|
+| A | Center |
+| B | Left |
+| C | Center |
+| D | Center |
+| E | Center |
+| F | Center |
+| G | Center |
