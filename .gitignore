@@ -6,6 +6,7 @@
 
 # Optional: keep local clasp project mapping out of git.
 .clasp.json
+**/.clasp.json
 
 # ------------------------------
 # Dependencies / build artifacts
@@ -14,6 +15,9 @@ node_modules/
 dist/
 build/
 coverage/
+**/.dart_tool/
+SheetFlow.FlutterMobile/build/
+SheetFlow.FlutterMobile/.dart_tool/
 
 # ------------------------------
 # Logs
@@ -47,3 +51,4 @@ Thumbs.db
 .kilo
 .kiro
 package-lock.json
+.agents
