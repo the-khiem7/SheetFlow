@@ -72,7 +72,7 @@ jobs:
            echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
 
       - name: Validate Deployment
-         run: |
+        run: |
            echo "🧪 Validating deployment..."
 
            DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
