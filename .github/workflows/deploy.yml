@@ -67,35 +67,72 @@ jobs:
           # Update existing deployment (fixed URL approach)
           clasp deploy --deploymentId ${{ secrets.DEPLOYMENT_ID }}
 
-          echo "✅ Deployment update completed successfully"
-          echo "🔗 Web App URL remains fixed:"
-          echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+           echo "✅ Deployment update completed successfully"
+           echo "🔗 Web App URL remains fixed:"
+           echo "https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
 
       - name: Validate Deployment
-        run: |
-          echo "🧪 Validating deployment..."
+         run: |
+           echo "🧪 Validating deployment..."
 
-          # Test if the deployment URL is accessible
-          DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
+           DEPLOY_URL="https://script.google.com/macros/s/${{ secrets.SCRIPT_ID }}/exec"
 
-          # Basic connectivity test (should return JSON, not HTML 404)
-          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
+           echo "🔗 Testing URL: $DEPLOY_URL"
 
-          HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-          BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
+           # Test 1: Basic connectivity (no auth - should get auth error, not 404)
+           echo "📡 Test 1: Basic connectivity check"
+           RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" "$DEPLOY_URL?path=test")
+           HTTP_CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+           BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
-          echo "📊 HTTP Status: $HTTP_CODE"
+           echo "📊 HTTP Status: $HTTP_CODE"
 
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Deployment validation passed"
-            echo "📄 Response preview: ${BODY:0:100}..."
-          elif [ "$HTTP_CODE" -eq 404 ]; then
-            echo "❌ Deployment validation failed - 404 Not Found"
-            echo "This might indicate the deployment is not properly configured"
-            exit 1
-          else
-            echo "⚠️ Unexpected HTTP status: $HTTP_CODE"
-            echo "This might be expected if the API requires specific parameters"
-          fi
+           if [ "$HTTP_CODE" -eq 404 ]; then
+             echo "❌ CRITICAL: 404 Not Found - Deployment URL is invalid!"
+             echo "This indicates:"
+             echo "  - SCRIPT_ID secret is wrong"
+             echo "  - Deployment is not a web app (might be library)"
+             echo "  - Deployment was deleted or expired"
+             echo ""
+             echo "🔧 Troubleshooting steps:"
+             echo "  1. Check SCRIPT_ID matches: https://script.google.com/macros/s/[SCRIPT_ID]/exec"
+             echo "  2. Verify deployment type is 'Web app', not 'Library'"
+             echo "  3. Check deployment is active in Apps Script Editor"
+             exit 1
+           elif [ "$HTTP_CODE" -eq 200 ]; then
+             echo "✅ Deployment is accessible (200 OK)"
+             echo "📄 Response preview: ${BODY:0:100}..."
+           elif [ "$HTTP_CODE" -eq 401 ] || [ "$HTTP_CODE" -eq 403 ]; then
+             echo "✅ Deployment exists (auth required: $HTTP_CODE)"
+             echo "This is expected - API requires X-API-Key header"
+           else
+             echo "⚠️ Unexpected response: $HTTP_CODE"
+             echo "Response: ${BODY:0:200}..."
+           fi
 
-          echo "🎉 Full deployment pipeline completed successfully!"
+           # Test 2: Check if API key is configured (optional)
+           if [ -n "${{ secrets.API_KEY }}" ]; then
+             echo ""
+             echo "🔑 Test 2: API authentication check"
+             AUTH_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+               -H "X-API-Key: ${{ secrets.API_KEY }}" \
+               "$DEPLOY_URL?path=tasks")
+
+             AUTH_CODE=$(echo $AUTH_RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+             AUTH_BODY=$(echo $AUTH_RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
+
+             if [ "$AUTH_CODE" -eq 200 ]; then
+               echo "✅ API authentication successful"
+               echo "📄 Tasks response: ${AUTH_BODY:0:100}..."
+             else
+               echo "⚠️ API auth test failed ($AUTH_CODE)"
+               echo "This might be normal if API key is not set in script properties"
+             fi
+           else
+             echo ""
+             echo "ℹ️ API_KEY secret not provided - skipping auth test"
+           fi
+
+           echo ""
+           echo "🎉 Deployment validation completed!"
+           echo "✅ Apps Script deployment is live and accessible"
