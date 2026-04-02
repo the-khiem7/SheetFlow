@@ -1,67 +1,111 @@
 const ApiService = {
   // Web app entry point for GET requests
   doGet(e) {
+    const requestId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 9);
+    Logger.log('🚀 [' + requestId + '] GET REQUEST STARTED');
+    Logger.log('📨 [' + requestId + '] Raw parameters: ' + JSON.stringify(e.parameter || {}));
+
     try {
       // Authenticate request
-      if (!this.authenticate(e)) {
+      Logger.log('🔐 [' + requestId + '] Starting authentication...');
+      if (!this.authenticate(e, requestId)) {
+        Logger.log('❌ [' + requestId + '] Authentication failed');
         return ContentService
           .createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      Logger.log('✅ [' + requestId + '] Authentication successful');
 
       const path = e.parameter.path || 'tasks';
       const method = 'GET';
+      Logger.log('🎯 [' + requestId + '] Routing: method=' + method + ', path=' + path);
 
       switch (path) {
         case 'tasks':
-          return this.handleTasks(method, e.parameter);
+          Logger.log('📋 [' + requestId + '] Handling tasks endpoint');
+          return this.handleTasks(method, e.parameter, null, requestId);
         case 'reports/daily':
-          return this.handleDailyReport(method, e.parameter);
+          Logger.log('📊 [' + requestId + '] Handling daily reports endpoint');
+          return this.handleDailyReport(method, e.parameter, requestId);
         default:
-          return this.errorResponse('Invalid endpoint');
+          Logger.log('❌ [' + requestId + '] Invalid endpoint: ' + path);
+          return this.errorResponse('Invalid endpoint', requestId);
       }
     } catch (error) {
-      Logger.log('API Error: ' + error.toString());
-      return this.errorResponse('Internal server error');
+      Logger.log('💥 [' + requestId + '] API Error: ' + error.toString());
+      Logger.log('📋 [' + requestId + '] Stack trace: ' + error.stack);
+      return this.errorResponse('Internal server error', requestId);
     }
   },
 
   // Web app entry point for POST/PUT/DELETE requests
   doPost(e) {
+    const requestId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 9);
+    Logger.log('🚀 [' + requestId + '] POST REQUEST STARTED');
+    Logger.log('📨 [' + requestId + '] Raw parameters: ' + JSON.stringify(e.parameter || {}));
+    Logger.log('📦 [' + requestId + '] Post data present: ' + (e.postData ? 'YES' : 'NO'));
+    if (e.postData) {
+      Logger.log('📦 [' + requestId + '] Post data length: ' + (e.postData.contents ? e.postData.contents.length : 0) + ' chars');
+      Logger.log('📦 [' + requestId + '] Post data type: ' + (e.postData.type || 'unknown'));
+    }
+
     try {
       // Authenticate request
-      if (!this.authenticate(e)) {
+      Logger.log('🔐 [' + requestId + '] Starting authentication...');
+      if (!this.authenticate(e, requestId)) {
+        Logger.log('❌ [' + requestId + '] Authentication failed');
         return ContentService
           .createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      Logger.log('✅ [' + requestId + '] Authentication successful');
 
       const path = e.parameter.path || 'tasks';
       const method = e.parameter.method || 'POST'; // Apps Script sends POST for all non-GET
+      Logger.log('🎯 [' + requestId + '] Routing: method=' + method + ', path=' + path);
 
       switch (path) {
         case 'tasks':
-          return this.handleTasks(method, e.parameter, e.postData ? e.postData.contents : null);
+          Logger.log('📋 [' + requestId + '] Handling tasks endpoint with body');
+          return this.handleTasks(method, e.parameter, e.postData ? e.postData.contents : null, requestId);
         default:
-          return this.errorResponse('Invalid endpoint');
+          Logger.log('❌ [' + requestId + '] Invalid endpoint: ' + path);
+          return this.errorResponse('Invalid endpoint', requestId);
       }
     } catch (error) {
-      Logger.log('API Error: ' + error.toString());
-      return this.errorResponse('Internal server error');
+      Logger.log('💥 [' + requestId + '] API Error: ' + error.toString());
+      Logger.log('📋 [' + requestId + '] Stack trace: ' + error.stack);
+      return this.errorResponse('Internal server error', requestId);
     }
   },
 
   // Authenticate using API key from X-API-Key header
-  authenticate(e) {
+  authenticate(e, requestId) {
+    Logger.log('🔑 [' + requestId + '] Checking API key authentication');
+
     const apiKey = e.parameter['X-API-Key'] || (e.postData ? JSON.parse(e.postData.contents)['X-API-Key'] : null);
-    if (!apiKey) return false;
+    Logger.log('🔑 [' + requestId + '] API key present: ' + (apiKey ? 'YES' : 'NO'));
+    if (!apiKey) {
+      Logger.log('❌ [' + requestId + '] No API key found in parameters or post data');
+      return false;
+    }
+
+    Logger.log('🔑 [' + requestId + '] API key: ' + apiKey.substring(0, 8) + '...');
 
     const validKeys = PropertiesService.getScriptProperties()
       .getProperty('API_KEYS');
-    if (!validKeys) return false;
+    Logger.log('🔑 [' + requestId + '] Script properties API_KEYS present: ' + (validKeys ? 'YES' : 'NO'));
+    if (!validKeys) {
+      Logger.log('❌ [' + requestId + '] No API_KEYS property found in script properties');
+      return false;
+    }
 
     const keys = validKeys.split(',');
-    return keys.includes(apiKey.trim());
+    Logger.log('🔑 [' + requestId + '] Valid keys count: ' + keys.length);
+    const isValid = keys.includes(apiKey.trim());
+    Logger.log('🔑 [' + requestId + '] API key validation result: ' + (isValid ? 'VALID' : 'INVALID'));
+
+    return isValid;
   },
 
   // Handle tasks endpoints
