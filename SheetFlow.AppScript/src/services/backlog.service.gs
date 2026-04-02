@@ -33,7 +33,6 @@ const BacklogService = {
 
     const editedCol = e.range.columnStart;
     if (editedCol < cfg.START_COL || editedCol > cfg.START_COL + cfg.NUM_COLS - 1) return;
-    if (cfg.SORT_TRIGGER_COLUMNS.indexOf(editedCol) === -1) return;
 
     this.sortAndFormat();
   },

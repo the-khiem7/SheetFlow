@@ -12,8 +12,7 @@ const SheetSchema = {
       WORK_DATE: 5,
       NOTE: 6,
       PINNED: 7
-    },
-    SORT_TRIGGER_COLUMNS: [1, 3, 5, 7]
+    }
   },
   DAILY: {
     SHEET_NAME: "Daily Report",

@@ -1,7 +1,7 @@
 # SheetFlow — Roadmap
 
 ## Phase 0: Foundation (Done)
-- [x] Basic onEdit auto-sort (C/D/E columns)
+- [x] Basic onEdit auto-sort (A:G columns)
 - [x] sortBacklogs() manual trigger
 - [x] applyDateBorders (top border khi đổi ngày)
 - [x] applyAlignment (B left, ACDEF center)
