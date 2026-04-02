@@ -1,0 +1,26 @@
+const APP_CONFIG = {
+  API: {
+    DEFAULT_PATH: "tasks",
+    DEFAULT_POST_METHOD: "POST",
+    API_KEYS_PROPERTY: "API_KEYS"
+  },
+  TASK_STATUS: {
+    FINISHED: "Finished"
+  }
+};
+
+const CONFIG = {
+  BACKLOGS: {
+    SHEET_NAME: SheetSchema.BACKLOGS.SHEET_NAME,
+    START_ROW: SheetSchema.BACKLOGS.START_ROW,
+    START_COL: SheetSchema.BACKLOGS.START_COL,
+    NUM_COLS: SheetSchema.BACKLOGS.NUM_COLS
+  },
+  DAILY: {
+    SHEET_NAME: SheetSchema.DAILY.SHEET_NAME,
+    START_ROW: SheetSchema.DAILY.START_ROW,
+    DATE_COL: SheetSchema.DAILY.DATE_COL,
+    GOALS_COL: SheetSchema.DAILY.GOALS_COL,
+    FINISHED_COL: SheetSchema.DAILY.FINISHED_COL
+  }
+};

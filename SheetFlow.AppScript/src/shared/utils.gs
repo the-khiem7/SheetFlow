@@ -2,12 +2,7 @@ const Utils = {
   getDataRange(sheet, startRow, startCol, numCols) {
     const lastRow = sheet.getLastRow();
     if (lastRow < startRow) return null;
-    return sheet.getRange(
-      startRow,
-      startCol,
-      lastRow - startRow + 1,
-      numCols
-    );
+    return sheet.getRange(startRow, startCol, lastRow - startRow + 1, numCols);
   },
 
   toDateKey(value) {
@@ -17,11 +12,7 @@ const Utils = {
       dateObj = new Date(value);
     }
     if (isNaN(dateObj.getTime())) return "";
-    return Utilities.formatDate(
-      dateObj,
-      Session.getScriptTimeZone(),
-      "yyyy-MM-dd"
-    );
+    return Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
   },
 
   isSameDate(a, b) {
@@ -31,5 +22,9 @@ const Utils = {
   safeTrim(value) {
     if (value === null || value === undefined) return "";
     return String(value).trim();
+  },
+
+  createRequestId() {
+    return new Date().getTime() + "_" + Math.random().toString(36).substr(2, 9);
   }
 };
