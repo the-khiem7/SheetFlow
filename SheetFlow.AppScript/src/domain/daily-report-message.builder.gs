@@ -29,6 +29,8 @@ const DailyReportMessageBuilder = {
     const todayText = this.normalizeSectionText(safeInput.todayText);
 
     return [
+      "Reports",
+      "",
       "Chúc mọi người buổi sáng tốt lành. Em xin gửi báo cáo công việc ngày " + (safeInput.dayADisplay || ""),
       "",
       "Nội dung đã thực hiện:",
