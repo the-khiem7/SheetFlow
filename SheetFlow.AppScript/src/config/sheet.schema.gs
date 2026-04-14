@@ -4,6 +4,10 @@ const SheetSchema = {
     START_ROW: 3,
     START_COL: 1,
     NUM_COLS: 7,
+    DAILY_MESSAGE: {
+      ROW: 2,
+      COL: 11
+    },
     FIELDS: {
       PROJECT: 1,
       TASK_NAME: 2,

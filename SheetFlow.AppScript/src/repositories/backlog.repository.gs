@@ -139,5 +139,20 @@ const BacklogRepository = {
       ),
       "center"
     );
+  },
+
+  writeDailyMessage(message) {
+    const sheet = this.getSheet();
+    if (!sheet) return false;
+
+    const range = SpreadsheetRepository.getRange(
+      sheet,
+      SheetSchema.BACKLOGS.DAILY_MESSAGE.ROW,
+      SheetSchema.BACKLOGS.DAILY_MESSAGE.COL,
+      1,
+      1
+    );
+    SpreadsheetRepository.setValue(range, message || "");
+    return true;
   }
 };

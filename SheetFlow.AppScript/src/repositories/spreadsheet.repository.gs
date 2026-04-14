@@ -23,6 +23,10 @@ const SpreadsheetRepository = {
     range.setValues(values);
   },
 
+  setValue(range, value) {
+    range.setValue(value);
+  },
+
   clearRange(range) {
     range.clear();
   },

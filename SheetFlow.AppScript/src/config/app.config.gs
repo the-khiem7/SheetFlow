@@ -6,6 +6,10 @@ const APP_CONFIG = {
   },
   TASK_STATUS: {
     FINISHED: "Finished"
+  },
+  DAILY_REPORT_MESSAGE: {
+    CUTOFF_HOUR: 9,
+    SPREADSHEET_URL: "https://docs.google.com/spreadsheets/d/19FXDXrVGvuTdDbnfO1hTID3lFRZDPaqEWUTfOyhYNLw/edit?usp=sharing"
   }
 };
 
@@ -14,7 +18,9 @@ const CONFIG = {
     SHEET_NAME: SheetSchema.BACKLOGS.SHEET_NAME,
     START_ROW: SheetSchema.BACKLOGS.START_ROW,
     START_COL: SheetSchema.BACKLOGS.START_COL,
-    NUM_COLS: SheetSchema.BACKLOGS.NUM_COLS
+    NUM_COLS: SheetSchema.BACKLOGS.NUM_COLS,
+    DAILY_MESSAGE_ROW: SheetSchema.BACKLOGS.DAILY_MESSAGE.ROW,
+    DAILY_MESSAGE_COL: SheetSchema.BACKLOGS.DAILY_MESSAGE.COL
   },
   DAILY: {
     SHEET_NAME: SheetSchema.DAILY.SHEET_NAME,

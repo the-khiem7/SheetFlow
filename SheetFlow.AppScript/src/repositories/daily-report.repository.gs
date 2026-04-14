@@ -74,5 +74,19 @@ const DailyReportRepository = {
     }
 
     return reports;
+  },
+
+  getReportByDate(reportDate) {
+    const dateKey = Utils.toDateKey(reportDate);
+    if (!dateKey) return null;
+
+    const reports = this.getReports();
+    for (let i = 0; i < reports.length; i++) {
+      if (reports[i].date === dateKey) {
+        return reports[i];
+      }
+    }
+
+    return null;
   }
 };
