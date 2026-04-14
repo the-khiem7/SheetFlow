@@ -14,6 +14,7 @@
     "src/domain/task.sorter.gs",
     "src/domain/backlog.formatter.gs",
     "src/domain/daily-report.builder.gs",
+    "src/domain/daily-report-message.builder.gs",
     "src/repositories/spreadsheet.repository.gs",
     "src/repositories/backlog.repository.gs",
     "src/repositories/daily-report.repository.gs",
