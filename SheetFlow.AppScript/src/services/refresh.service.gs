@@ -17,7 +17,7 @@ const RefreshService = {
     }
 
     try {
-      BacklogService.sortManual();
+      BacklogService.sortManual(runContext);
       if (ExecutionCoordinatorService.abortIfStale(runContext)) {
         return {
           accepted: false,
@@ -25,7 +25,7 @@ const RefreshService = {
         };
       }
 
-      DailyReportService.refresh();
+      DailyReportService.refresh(runContext);
       if (ExecutionCoordinatorService.abortIfStale(runContext)) {
         return {
           accepted: false,

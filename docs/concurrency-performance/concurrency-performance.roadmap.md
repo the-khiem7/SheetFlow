@@ -88,16 +88,22 @@ Completed notes:
 
 ## Phase 5: Stale-Run Protection
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Add monotonic revision or generation numbers in script properties
-- [ ] Snapshot the current revision at worker start
-- [ ] Abort writeback if the worker revision becomes stale before commit
-- [ ] Ensure old runs cannot overwrite newer edits
+- [x] Add monotonic revision or generation numbers in script properties
+- [x] Snapshot the current revision at worker start
+- [x] Abort writeback if the worker revision becomes stale before commit
+- [x] Ensure old runs cannot overwrite newer edits
 
 Done when:
 - a newer edit always wins over an older execution
+
+Completed notes:
+- stale detection now compares both revision and running token
+- `BacklogService` aborts before full-range rewrite and before formatting continues
+- `DailyReportService` aborts before report and message writeback
+- old runs now give up instead of committing stale snapshots after newer edits
 
 ## Phase 6: Reduce Write Amplification
 

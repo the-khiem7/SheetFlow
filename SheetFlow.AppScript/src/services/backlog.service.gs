@@ -1,10 +1,12 @@
 const FormatService = {
-  applyDateBorders() {
+  applyDateBorders(runContext) {
     const rows = BacklogRepository.getRows();
     if (rows.length === 0) return;
 
     const startRow = SheetSchema.BACKLOGS.START_ROW;
     for (let i = 1; i < rows.length; i++) {
+      if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
+
       const rowNumber = startRow + i;
       BacklogRepository.clearBordersForRow(rowNumber);
 
@@ -14,7 +16,9 @@ const FormatService = {
     }
   },
 
-  applyAlignment() {
+  applyAlignment(runContext) {
+    if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
+
     const rows = BacklogRepository.getRows();
     if (rows.length === 0) return;
     BacklogRepository.applyAlignments(SheetSchema.BACKLOGS.START_ROW, rows.length);
@@ -38,21 +42,25 @@ const BacklogService = {
     AppLogger.log("Backlog marked dirty at revision " + dirtyResult.revision);
   },
 
-  sortAndFormat() {
+  sortAndFormat(runContext) {
     const originalValues = BacklogRepository.getRows();
     if (originalValues.length === 0) return;
 
     const sortedValues = TaskSorter.sortRows(originalValues);
+    if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
+
     if (TaskSorter.isOrderChanged(originalValues, sortedValues)) {
       BacklogRepository.replaceRows(sortedValues);
     }
 
-    FormatService.applyDateBorders();
-    FormatService.applyAlignment();
+    if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
+
+    FormatService.applyDateBorders(runContext);
+    FormatService.applyAlignment(runContext);
   },
 
-  sortManual() {
-    this.sortAndFormat();
+  sortManual(runContext) {
+    this.sortAndFormat(runContext);
   },
 
   setupPinnedColumn() {

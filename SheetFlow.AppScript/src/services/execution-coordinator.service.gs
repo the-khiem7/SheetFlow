@@ -51,7 +51,7 @@ const ExecutionCoordinatorService = {
     if (!runContext || !runContext.started) return false;
 
     const state = ExecutionStateRepository.getState();
-    return state.revision !== runContext.revision;
+    return state.revision !== runContext.revision || state.runningToken !== runContext.token;
   },
 
   abortIfStale(runContext) {
@@ -66,12 +66,16 @@ const ExecutionCoordinatorService = {
   finishRun(runContext, result) {
     if (!runContext || !runContext.lockHandle) return;
 
+    const currentState = ExecutionStateRepository.getState();
+    const ownsRunningToken = currentState.runningToken === runContext.token;
+
     ExecutionStateRepository.setLastRun(runContext.reason, result || "completed");
-    ExecutionStateRepository.clearRunning();
+    if (ownsRunningToken) {
+      ExecutionStateRepository.clearRunning();
+    }
 
     if (result !== "stale") {
-      const currentState = ExecutionStateRepository.getState();
-      if (currentState.revision === runContext.revision) {
+      if (currentState.revision === runContext.revision && ownsRunningToken) {
         ExecutionStateRepository.clearDirty();
       }
     }
