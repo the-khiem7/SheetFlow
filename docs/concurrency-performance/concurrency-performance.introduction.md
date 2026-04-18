@@ -11,9 +11,9 @@ The target problems are:
 - users have no explicit control over when expensive refresh logic runs
 - concurrent desktop and API writes can conflict because both trigger full refresh flows
 
-## Current State
+## Previous State
 
-The current desktop flow is:
+Before the refactor, the desktop flow was:
 
 ```text
 onEdit(e)
@@ -22,7 +22,7 @@ onEdit(e)
   -> DailyReportService.refresh()
 ```
 
-The current mobile flow also triggers a heavy full refresh:
+Before the refactor, the mobile flow also triggered a heavy full refresh:
 
 ```text
 API create/update/delete
@@ -30,7 +30,7 @@ API create/update/delete
   -> RefreshService.refreshAll()
 ```
 
-This means both desktop edits and API writes can cause:
+That model caused both desktop edits and API writes to trigger:
 - full-sheet read of backlog rows
 - full sorting in memory
 - full range rewrite through `BacklogRepository.replaceRows(...)`
@@ -81,16 +81,17 @@ The core design issue is not only algorithm speed. It is the absence of:
 - user-driven refresh mode
 - stale-run protection
 
-## Proposed Direction
+## Implemented Direction
 
-The recommended implementation direction is:
+The implementation now follows this model:
 
-1. Add a centralized execution coordinator.
-2. Stop doing full heavy refresh work directly inside every `onEdit`.
-3. Convert `onEdit` into a lightweight capture step that marks the sheet as dirty.
-4. Process expensive work through a single serialized worker flow.
-5. Add explicit manual refresh commands so users can decide when sorting and report generation should happen.
-6. Add stale-run detection so older executions cannot overwrite newer state.
+1. A centralized execution coordinator owns dirty state, revision tracking, and run tokens.
+2. `onEdit` no longer runs the full maintenance pipeline synchronously.
+3. Desktop edits mark the sheet dirty and return quickly.
+4. Heavy work runs through a single guarded worker path in `RefreshService`.
+5. Desktop users can trigger refresh explicitly from the spreadsheet menu.
+6. API writes now mark dirty and attempt guarded processing through the same coordinator.
+7. Stale runs abort before committing outdated writeback.
 
 ## Recommended Strategy
 
@@ -140,13 +141,14 @@ This planning scope does not assume:
 - a move away from Google Sheets
 - background workers outside Apps Script
 
-## Expected Deliverables
+## Delivered Components
 
-Implementation should eventually produce:
-- a lock and execution coordinator
-- dirty-state storage in script properties
-- a manual refresh pathway
-- debounced or queued refresh behavior
-- stale-run protection
-- lighter `onEdit`
-- updated API and docs for mobile consumers
+The implementation now includes:
+- a `LockRepository` wrapper around `LockService`
+- `ExecutionStateRepository` for dirty/revision/running-token persistence
+- `ExecutionCoordinatorService` for guarded run lifecycle
+- lightweight dirty-only `onEdit`
+- manual refresh from spreadsheet UI
+- guarded refresh execution through `RefreshService.processDirty(...)`
+- stale-run cancellation before backlog/report writeback
+- explicit API endpoints for refresh control and execution status

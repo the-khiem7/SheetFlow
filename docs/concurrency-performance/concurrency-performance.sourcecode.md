@@ -38,11 +38,10 @@ Problems in this flow:
 
 ### New modules
 
-Recommended additions:
+Implemented additions:
 - `src/services/execution-coordinator.service.gs`
 - `src/repositories/lock.repository.gs`
 - `src/repositories/execution-state.repository.gs`
-- `src/domain/refresh-policy.builder.gs`
 
 ### Responsibility split
 
@@ -70,6 +69,7 @@ Recommended additions:
 ```mermaid
 classDiagram
     class DesktopEntry {
+      +onOpen()
       +onEdit(e)
       +refreshAll()
     }
@@ -82,7 +82,6 @@ classDiagram
 
     class ExecutionCoordinatorService {
       +markDirty(context)
-      +tryProcessDirty(reason)
       +beginRun(reason)
       +finishRun(result)
       +abortIfStale(runToken)
@@ -173,7 +172,6 @@ Current:
 Target:
 - validate edit range
 - mark dirty
-- optionally schedule deferred processing
 - return quickly
 
 ### `RefreshService.refreshAll()`
@@ -184,6 +182,7 @@ Current:
 Target:
 - become the single controlled path for heavy work
 - only run through coordinator lock + stale checks
+- expose a guarded worker path via `processDirty(...)`
 
 ### `ApiTasks`
 
@@ -192,7 +191,7 @@ Current:
 
 Target:
 - write task data
-- mark dirty or request coordinated processing
+- mark dirty and attempt coordinated processing
 - avoid bypassing the concurrency model
 
 ## Suggested Persistent State

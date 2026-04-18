@@ -144,17 +144,21 @@ Completed notes:
 
 ## Phase 8: Validation
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Add tests for lock acquisition failure
-- [ ] Add tests for stale-run cancellation
-- [ ] Add tests for rapid sequential edits
-- [ ] Add tests for overlapping API and desktop writes
-- [ ] Add tests for manual refresh behavior
+- [x] Add tests for lock acquisition failure
+- [x] Add tests for stale-run cancellation
+- [x] Add tests for rapid sequential edits
+- [x] Add tests for overlapping API and desktop writes
+- [x] Add tests for manual refresh behavior
 
 Done when:
 - concurrency scenarios are reproducible and verified in Apps Script test flows
+
+Completed notes:
+- `test.runner.gs` now covers coordinator lifecycle, stale-run detection, guarded refresh processing, and refresh API handlers.
+- Docs were updated from planning language to implemented behavior and current API contracts.
 
 ## Recommended Execution Order
 

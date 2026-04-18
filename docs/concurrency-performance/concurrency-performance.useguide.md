@@ -12,8 +12,10 @@ The current Apps Script web app exposes:
 - `POST /?path=tasks&method=PUT&id=<rowId>`
 - `POST /?path=tasks&method=DELETE&id=<rowId>`
 - `GET /?path=reports/daily`
+- `POST /?path=refresh&method=POST`
+- `GET /?path=refresh/status`
 
-Today, task mutations effectively trigger a full refresh flow after writing to the sheet.
+Task mutations now enter the shared execution coordinator after writing to the sheet.
 
 ## Current Behavior Contract
 
@@ -80,46 +82,21 @@ POST /exec?path=tasks&method=DELETE&id=12&apiKey=<YOUR_API_KEY>
 GET /exec?path=reports/daily&apiKey=<YOUR_API_KEY>
 ```
 
-## Planned Contract Changes
-
-The concurrency/performance work should keep reads stable but may evolve mutation semantics.
-
-### Likely behavioral change
-
-Task writes may become:
-- write data immediately
-- mark the sheet dirty
-- defer heavy sorting/report generation to a coordinated worker or manual refresh
-
-That means clients should not assume every mutation immediately produces fully refreshed derived views.
-
-## Recommended Future Endpoints
-
-These are planning targets, not implemented endpoints yet.
+## Refresh Endpoints
 
 ### Trigger refresh explicitly
 
 ```http
 POST /exec?path=refresh&method=POST&apiKey=<YOUR_API_KEY>
-Content-Type: application/json
-```
-
-Example body:
-
-```json
-{
-  "reason": "manual"
-}
 ```
 
 Example response:
 
 ```json
 {
-  "success": true,
   "data": {
     "accepted": true,
-    "mode": "queued",
+    "reason": "completed",
     "revision": 42
   }
 }
@@ -135,7 +112,6 @@ Example response:
 
 ```json
 {
-  "success": true,
   "data": {
     "dirty": true,
     "running": false,
@@ -146,13 +122,24 @@ Example response:
 }
 ```
 
+## Mutation Semantics
+
+Task writes now follow this contract:
+- write the row immediately
+- mark execution state as dirty
+- attempt a guarded processing run through the coordinator
+- if the worker is locked or stale, the dirty state remains for a later refresh
+
+This means a successful write still means the row write succeeded, but derived views may be eventually consistent until the next successful guarded refresh.
+
 ## Mobile Integration Guidance
 
 During and after the refactor, mobile clients should follow these assumptions:
 - a successful write means the row write succeeded
 - it may not mean all derived views were recomputed immediately
 - clients should tolerate eventual consistency for reports
-- if explicit refresh endpoints are added, mobile should call them intentionally instead of assuming background refresh from every write
+- clients can call `POST /?path=refresh&method=POST` intentionally when they need an explicit refresh
+- clients can inspect `GET /?path=refresh/status` for observability
 
 ## UX Guidance For Spreadsheet Users
 
@@ -163,10 +150,9 @@ Target UX after implementation:
 
 ## Compatibility Notes
 
-The best migration path is:
-1. keep current task read contracts unchanged
-2. preserve current mutation request/response shapes where possible
-3. add refresh/status endpoints separately
-4. change heavy refresh behavior behind the scenes first
+The implementation preserves:
+1. existing task read contracts
+2. existing task mutation request/response shapes
+3. existing daily report read endpoint
 
-This approach reduces disruption for the mobile app while fixing the desktop execution model.
+The main change is execution semantics behind the scenes, plus the addition of refresh/status endpoints for explicit control.

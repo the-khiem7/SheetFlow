@@ -45,6 +45,31 @@ function runAllTests() {
     testDailyReportMessageFormatting();
     console.log("   PASS: Daily report message formatting test passed\n");
 
+    // Test 9: Execution coordinator lifecycle
+    console.log("9. Testing execution coordinator lifecycle...");
+    testExecutionCoordinatorLifecycle();
+    console.log("   PASS: Execution coordinator lifecycle test passed\n");
+
+    // Test 10: Execution coordinator lock failure
+    console.log("10. Testing execution coordinator lock failure...");
+    testExecutionCoordinatorLockFailure();
+    console.log("   PASS: Execution coordinator lock failure test passed\n");
+
+    // Test 11: Execution coordinator stale detection
+    console.log("11. Testing execution coordinator stale detection...");
+    testExecutionCoordinatorStaleDetection();
+    console.log("   PASS: Execution coordinator stale detection test passed\n");
+
+    // Test 12: Refresh service guarded processing
+    console.log("12. Testing refresh service guarded processing...");
+    testRefreshServiceGuardedProcessing();
+    console.log("   PASS: Refresh service guarded processing test passed\n");
+
+    // Test 13: API refresh handlers
+    console.log("13. Testing API refresh handlers...");
+    testApiRefreshHandlers();
+    console.log("   PASS: API refresh handlers test passed\n");
+
     console.log("All tests passed. Implementation is ready for deployment.");
 
   } catch (error) {
@@ -230,4 +255,183 @@ function testDailyReportMessageFormatting() {
   if (emptyMessage.indexOf("Công việc hôm nay (16/04/2026):\n-") === -1) {
     throw new Error("Empty today section fallback is incorrect");
   }
+}
+
+function testExecutionCoordinatorLifecycle() {
+  clearExecutionExecutionStateForTests();
+
+  const dirtyResult = ExecutionCoordinatorService.markDirty("test:lifecycle");
+  if (!dirtyResult.dirty || dirtyResult.revision < 1) {
+    throw new Error("markDirty should set dirty state and revision");
+  }
+
+  const runContext = ExecutionCoordinatorService.beginRun("test:lifecycle", {
+    requireDirty: true,
+    lockTimeoutMs: 1
+  });
+
+  if (!runContext.started) {
+    throw new Error("beginRun should start when dirty state exists");
+  }
+
+  if (ExecutionCoordinatorService.abortIfStale(runContext)) {
+    throw new Error("Fresh run should not be stale");
+  }
+
+  ExecutionCoordinatorService.finishRun(runContext, "completed");
+  const state = ExecutionStateRepository.getState();
+
+  if (state.dirty) {
+    throw new Error("finishRun(completed) should clear dirty state");
+  }
+
+  if (state.runningToken) {
+    throw new Error("finishRun(completed) should clear running token");
+  }
+
+  if (state.lastRunReason !== "test:lifecycle") {
+    throw new Error(`Unexpected lastRunReason: ${state.lastRunReason}`);
+  }
+}
+
+function testExecutionCoordinatorLockFailure() {
+  const originalTryAcquire = LockRepository.tryAcquire;
+
+  try {
+    LockRepository.tryAcquire = function() {
+      return {
+        lock: null,
+        acquired: false
+      };
+    };
+
+    const runContext = ExecutionCoordinatorService.beginRun("test:locked", {
+      requireDirty: false,
+      lockTimeoutMs: 1
+    });
+
+    if (runContext.started !== false || runContext.reason !== "locked") {
+      throw new Error(`Expected locked result, got ${JSON.stringify(runContext)}`);
+    }
+  } finally {
+    LockRepository.tryAcquire = originalTryAcquire;
+  }
+}
+
+function testExecutionCoordinatorStaleDetection() {
+  clearExecutionExecutionStateForTests();
+
+  const firstDirty = ExecutionCoordinatorService.markDirty("test:stale:start");
+  const runContext = ExecutionCoordinatorService.beginRun("test:stale", {
+    requireDirty: true,
+    lockTimeoutMs: 1
+  });
+
+  if (!runContext.started) {
+    throw new Error("Run should start before stale simulation");
+  }
+
+  const secondDirty = ExecutionCoordinatorService.markDirty("test:stale:newer-edit");
+  if (secondDirty.revision <= firstDirty.revision) {
+    throw new Error("Sequential dirty marks should advance revision");
+  }
+
+  if (!ExecutionCoordinatorService.abortIfStale(runContext)) {
+    throw new Error("Run should be detected as stale after newer revision");
+  }
+
+  const state = ExecutionStateRepository.getState();
+  if (!state.dirty) {
+    throw new Error("Stale abort should preserve dirty state");
+  }
+}
+
+function testRefreshServiceGuardedProcessing() {
+  clearExecutionExecutionStateForTests();
+
+  const cleanResult = RefreshService.processDirty("test:clean", { force: false });
+  if (cleanResult.accepted !== false || cleanResult.reason !== "clean") {
+    throw new Error(`Clean processing should skip. Got: ${JSON.stringify(cleanResult)}`);
+  }
+
+  ExecutionCoordinatorService.markDirty("test:refresh");
+
+  const originalSortManual = BacklogService.sortManual;
+  const originalRefresh = DailyReportService.refresh;
+  const calls = [];
+
+  try {
+    BacklogService.sortManual = function(runContext) {
+      calls.push("sort:" + runContext.revision);
+    };
+
+    DailyReportService.refresh = function(runContext) {
+      calls.push("report:" + runContext.revision);
+    };
+
+    const result = RefreshService.processDirty("test:refresh", { force: false });
+    if (!result.accepted || result.reason !== "completed") {
+      throw new Error(`Guarded processing should complete. Got: ${JSON.stringify(result)}`);
+    }
+
+    if (JSON.stringify(calls) !== JSON.stringify(["sort:" + result.revision, "report:" + result.revision])) {
+      throw new Error(`Unexpected guarded processing order: ${JSON.stringify(calls)}`);
+    }
+  } finally {
+    BacklogService.sortManual = originalSortManual;
+    DailyReportService.refresh = originalRefresh;
+  }
+}
+
+function testApiRefreshHandlers() {
+  clearExecutionExecutionStateForTests();
+
+  const originalRefreshAll = RefreshService.refreshAll;
+  const originalProcessDirty = RefreshService.processDirty;
+
+  try {
+    RefreshService.refreshAll = function() {
+      return { accepted: true, reason: "completed", revision: 99 };
+    };
+
+    RefreshService.processDirty = function() {
+      return { accepted: false, reason: "clean" };
+    };
+
+    const forcedOutput = ApiRefresh.handleRefresh("POST", { force: "true" });
+    const forcedBody = parseJsonOutputForTests(forcedOutput);
+    if (!forcedBody.data || forcedBody.data.revision !== 99) {
+      throw new Error("Forced refresh endpoint should return refreshAll result");
+    }
+
+    ExecutionCoordinatorService.markDirty("test:status");
+    const statusOutput = ApiRefresh.handleStatus("GET");
+    const statusBody = parseJsonOutputForTests(statusOutput);
+
+    if (!statusBody.data || statusBody.data.dirty !== true) {
+      throw new Error("Refresh status endpoint should expose dirty state");
+    }
+  } finally {
+    RefreshService.refreshAll = originalRefreshAll;
+    RefreshService.processDirty = originalProcessDirty;
+  }
+}
+
+function clearExecutionExecutionStateForTests() {
+  const props = APP_CONFIG.EXECUTION.PROPERTIES;
+
+  ScriptPropertiesRepository.deleteProperty(props.DIRTY);
+  ScriptPropertiesRepository.deleteProperty(props.REVISION);
+  ScriptPropertiesRepository.deleteProperty(props.LAST_RUN_AT);
+  ScriptPropertiesRepository.deleteProperty(props.LAST_RUN_REASON);
+  ScriptPropertiesRepository.deleteProperty(props.LAST_RUN_RESULT);
+  ScriptPropertiesRepository.deleteProperty(props.LAST_DIRTY_AT);
+  ScriptPropertiesRepository.deleteProperty(props.LAST_DIRTY_REASON);
+  ScriptPropertiesRepository.deleteProperty(props.RUNNING_TOKEN);
+  ScriptPropertiesRepository.deleteProperty(props.RUNNING_REASON);
+  ScriptPropertiesRepository.deleteProperty(props.RUNNING_REVISION);
+}
+
+function parseJsonOutputForTests(output) {
+  return JSON.parse(output.getContent());
 }
