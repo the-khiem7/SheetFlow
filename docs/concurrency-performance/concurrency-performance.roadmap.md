@@ -69,16 +69,22 @@ Completed notes:
 
 ## Phase 4: Deferred Or Manual Processing
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Add a manual refresh entrypoint for users
-- [ ] Add a worker flow that processes dirty state safely
-- [ ] Optionally debounce worker execution via `CacheService` or a short-lived trigger strategy
-- [ ] Ensure multiple edits coalesce into one heavy run
+- [x] Add a manual refresh entrypoint for users
+- [x] Add a worker flow that processes dirty state safely
+- [x] Optionally debounce worker execution via `CacheService` or a short-lived trigger strategy
+- [x] Ensure multiple edits coalesce into one heavy run
 
 Done when:
 - many quick edits lead to one consolidated processing run instead of many overlapping runs
+
+Completed notes:
+- `RefreshService.processDirty(...)` is now the guarded worker path for heavy refresh work.
+- `refreshAll()` now runs through the coordinator instead of bypassing it.
+- Desktop users now have a spreadsheet menu entry to trigger refresh intentionally.
+- Multiple quick edits coalesce naturally because `onEdit` only marks dirty while manual refresh processes the latest state once.
 
 ## Phase 5: Stale-Run Protection
 

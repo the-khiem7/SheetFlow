@@ -1,3 +1,7 @@
+function onOpen() {
+  DesktopEntry.onOpen();
+}
+
 function onEdit(e) {
   DesktopEntry.onEdit(e);
 }

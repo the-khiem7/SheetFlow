@@ -1,4 +1,11 @@
 const DesktopEntry = {
+  onOpen() {
+    SpreadsheetApp.getUi()
+      .createMenu("SheetFlow")
+      .addItem("Refresh Pending Changes", "refreshAll")
+      .addToUi();
+  },
+
   onEdit(e) {
     AppLogger.log("Desktop onEdit triggered");
 
@@ -18,6 +25,6 @@ const DesktopEntry = {
 
   refreshAll() {
     AppLogger.log("Desktop manual refresh triggered");
-    RefreshService.refreshAll();
+    return RefreshService.refreshAll();
   }
 };
