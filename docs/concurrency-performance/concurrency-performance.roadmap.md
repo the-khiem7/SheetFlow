@@ -1,0 +1,149 @@
+# Concurrency And Performance Roadmap
+
+## Status Overview
+
+Feature area:
+- desktop spreadsheet execution safety
+- API concurrency safety
+- refresh orchestration
+- UX improvements for manual control
+
+Resume rule:
+- use this file as the implementation tracker for concurrency work
+
+## Phase 1: Baseline Analysis
+
+Status: `completed`
+
+Tasks:
+- [x] Document current write paths: `onEdit`, `refreshAll`, mobile create/update/delete
+- [x] Measure which operations rewrite the whole backlog range
+- [x] Identify all entrypoints that can overlap on the same sheet
+- [x] Capture timeout and lost-update scenarios with reproducible examples
+
+Done when:
+- the team has a concrete list of overlapping execution paths and unsafe write patterns
+
+Completed notes:
+- `DesktopEntry.onEdit()` currently triggers `BacklogService.handleEdit()` and `DailyReportService.refresh()` in the same execution.
+- `ApiTasks.createTask()`, `updateTask()`, and `deleteTask()` all call `RefreshService.refreshAll()` immediately after a row mutation.
+- `BacklogRepository.replaceRows(...)` rewrites the entire A:G data range, which is the primary lost-update risk during overlapping executions.
+- Formatting work currently loops row by row and performs repeated border operations after every sort.
+
+## Phase 2: Centralized Execution Coordinator
+
+Status: `planned`
+
+Tasks:
+- [ ] Introduce a `LockService` wrapper in repository or service layer
+- [ ] Create a coordinator service for lock acquisition, dirty flags, and run tokens
+- [ ] Standardize execution states: `idle`, `pending`, `running`, `stale`
+- [ ] Define lock timeout and retry policy
+
+Done when:
+- every heavy refresh path enters through one serialized coordination layer
+
+## Phase 3: Lightweight OnEdit
+
+Status: `planned`
+
+Tasks:
+- [ ] Change `DesktopEntry.onEdit()` to stop calling heavy refresh logic directly
+- [ ] Convert `onEdit` into a lightweight `markDirty` operation
+- [ ] Restrict dirty marking to relevant edit ranges only
+- [ ] Preserve harmless early returns for non-backlog edits
+
+Done when:
+- editing cells no longer triggers full sort + format + report generation synchronously
+
+## Phase 4: Deferred Or Manual Processing
+
+Status: `planned`
+
+Tasks:
+- [ ] Add a manual refresh entrypoint for users
+- [ ] Add a worker flow that processes dirty state safely
+- [ ] Optionally debounce worker execution via `CacheService` or a short-lived trigger strategy
+- [ ] Ensure multiple edits coalesce into one heavy run
+
+Done when:
+- many quick edits lead to one consolidated processing run instead of many overlapping runs
+
+## Phase 5: Stale-Run Protection
+
+Status: `planned`
+
+Tasks:
+- [ ] Add monotonic revision or generation numbers in script properties
+- [ ] Snapshot the current revision at worker start
+- [ ] Abort writeback if the worker revision becomes stale before commit
+- [ ] Ensure old runs cannot overwrite newer edits
+
+Done when:
+- a newer edit always wins over an older execution
+
+## Phase 6: Reduce Write Amplification
+
+Status: `planned`
+
+Tasks:
+- [ ] Review `BacklogRepository.replaceRows(...)` for full-range overwrite risks
+- [ ] Avoid unnecessary rewrites when order did not change
+- [ ] Reduce formatting calls to batched operations only
+- [ ] Split data refresh from cosmetic formatting where possible
+
+Done when:
+- refreshes write less data and make fewer expensive spreadsheet calls
+
+## Phase 7: API Alignment
+
+Status: `planned`
+
+Tasks:
+- [ ] Make mobile create/update/delete enter the same execution coordinator
+- [ ] Define whether API writes trigger immediate processing or dirty-only updates
+- [ ] Add refresh/status endpoints if mobile needs explicit control
+- [ ] Preserve backward compatibility where feasible
+
+Done when:
+- desktop and API writes follow the same concurrency contract
+
+## Phase 8: Validation
+
+Status: `planned`
+
+Tasks:
+- [ ] Add tests for lock acquisition failure
+- [ ] Add tests for stale-run cancellation
+- [ ] Add tests for rapid sequential edits
+- [ ] Add tests for overlapping API and desktop writes
+- [ ] Add tests for manual refresh behavior
+
+Done when:
+- concurrency scenarios are reproducible and verified in Apps Script test flows
+
+## Recommended Execution Order
+
+1. Phase 1: Baseline Analysis
+2. Phase 2: Centralized Execution Coordinator
+3. Phase 3: Lightweight OnEdit
+4. Phase 4: Deferred Or Manual Processing
+5. Phase 5: Stale-Run Protection
+6. Phase 6: Reduce Write Amplification
+7. Phase 7: API Alignment
+8. Phase 8: Validation
+
+## Risks
+
+Known risks:
+- lock misuse can block all processing if not released safely
+- time-driven or deferred triggers may complicate operational debugging
+- changing `onEdit` semantics may surprise users if manual refresh UX is unclear
+- mobile clients may depend on old immediate-refresh behavior
+
+## Decisions To Confirm Before Implementation
+
+- Should desktop default to `manual refresh` or `auto deferred refresh`?
+- Is a menu button acceptable for user-triggered refresh in Google Sheets?
+- Should mobile writes remain immediate, or should they also become dirty-only?
+- Is eventual consistency acceptable for daily report updates?
