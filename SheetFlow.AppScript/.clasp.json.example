@@ -28,6 +28,7 @@
     "src/api/auth.gs",
     "src/api/tasks.gs",
     "src/api/reports.gs",
+    "src/api/refresh.gs",
     "src/api/router.gs",
     "src/app/desktop.entry.gs",
     "src/app/api.entry.gs",

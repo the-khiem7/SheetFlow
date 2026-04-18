@@ -126,16 +126,21 @@ Completed notes:
 
 ## Phase 7: API Alignment
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Make mobile create/update/delete enter the same execution coordinator
-- [ ] Define whether API writes trigger immediate processing or dirty-only updates
-- [ ] Add refresh/status endpoints if mobile needs explicit control
-- [ ] Preserve backward compatibility where feasible
+- [x] Make mobile create/update/delete enter the same execution coordinator
+- [x] Define whether API writes trigger immediate processing or dirty-only updates
+- [x] Add refresh/status endpoints if mobile needs explicit control
+- [x] Preserve backward compatibility where feasible
 
 Done when:
 - desktop and API writes follow the same concurrency contract
+
+Completed notes:
+- API mutations now mark dirty through the shared coordinator and then attempt a guarded processing run.
+- `POST /?path=refresh` and `GET /?path=refresh/status` now exist for explicit control and observability.
+- existing task CRUD response shapes remain unchanged while refresh coordination moved behind the scenes.
 
 ## Phase 8: Validation
 

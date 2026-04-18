@@ -10,6 +10,8 @@ const ApiRouter = {
         return ApiTasks.handle("GET", e.parameter || {}, null, requestId);
       case "reports/daily":
         return ApiReports.handleDailyReport("GET");
+      case "refresh/status":
+        return ApiRefresh.handleStatus("GET");
       default:
         return ResponseFactory.jsonError("Invalid endpoint");
     }
@@ -28,6 +30,8 @@ const ApiRouter = {
     switch (path) {
       case "tasks":
         return ApiTasks.handle(method, params, body, requestId);
+      case "refresh":
+        return ApiRefresh.handleRefresh(method, params);
       default:
         return ResponseFactory.jsonError("Invalid endpoint");
     }

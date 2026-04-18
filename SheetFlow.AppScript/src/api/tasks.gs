@@ -51,7 +51,7 @@ const ApiTasks = {
     const rowId = BacklogRepository.appendRow(rowData);
     if (!rowId) return ResponseFactory.jsonError("Failed to save task");
 
-    RefreshService.refreshAll();
+    this.scheduleRefresh("api:create", requestId);
     AppLogger.request(requestId, "Created task at row " + rowId);
     return ResponseFactory.jsonSuccess(TaskMapper.toTask(rowData, rowId));
   },
@@ -73,7 +73,7 @@ const ApiTasks = {
       return ResponseFactory.jsonError("Failed to update task");
     }
 
-    RefreshService.refreshAll();
+    this.scheduleRefresh("api:update", requestId);
     AppLogger.request(requestId, "Updated task at row " + id);
     return ResponseFactory.jsonSuccess(TaskMapper.toTask(rowData, id));
   },
@@ -86,8 +86,18 @@ const ApiTasks = {
       return ResponseFactory.jsonError("Failed to delete task");
     }
 
-    RefreshService.refreshAll();
+    this.scheduleRefresh("api:delete", requestId);
     AppLogger.request(requestId, "Deleted task at row " + id);
     return ResponseFactory.jsonSuccess({ deleted: true });
+  },
+
+  scheduleRefresh(reason, requestId) {
+    const dirtyResult = ExecutionCoordinatorService.markDirty(reason);
+    const refreshResult = RefreshService.processDirty(reason, { force: false });
+
+    AppLogger.request(
+      requestId,
+      "Marked dirty at revision " + dirtyResult.revision + ", refresh result: " + JSON.stringify(refreshResult)
+    );
   }
 };
