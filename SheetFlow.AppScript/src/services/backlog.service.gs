@@ -34,7 +34,8 @@ const BacklogService = {
     const editedCol = e.range.columnStart;
     if (editedCol < cfg.START_COL || editedCol > cfg.START_COL + cfg.NUM_COLS - 1) return;
 
-    this.sortAndFormat();
+    const dirtyResult = ExecutionCoordinatorService.markDirty("desktop:onEdit");
+    AppLogger.log("Backlog marked dirty at revision " + dirtyResult.revision);
   },
 
   sortAndFormat() {

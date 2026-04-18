@@ -14,7 +14,6 @@ const DesktopEntry = {
     }
 
     BacklogService.handleEdit(sheet, e);
-    DailyReportService.refresh();
   },
 
   refreshAll() {

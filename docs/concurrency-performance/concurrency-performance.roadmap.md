@@ -51,16 +51,21 @@ Completed notes:
 
 ## Phase 3: Lightweight OnEdit
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Change `DesktopEntry.onEdit()` to stop calling heavy refresh logic directly
-- [ ] Convert `onEdit` into a lightweight `markDirty` operation
-- [ ] Restrict dirty marking to relevant edit ranges only
-- [ ] Preserve harmless early returns for non-backlog edits
+- [x] Change `DesktopEntry.onEdit()` to stop calling heavy refresh logic directly
+- [x] Convert `onEdit` into a lightweight `markDirty` operation
+- [x] Restrict dirty marking to relevant edit ranges only
+- [x] Preserve harmless early returns for non-backlog edits
 
 Done when:
 - editing cells no longer triggers full sort + format + report generation synchronously
+
+Completed notes:
+- `DesktopEntry.onEdit()` no longer invokes `DailyReportService.refresh()` directly.
+- `BacklogService.handleEdit()` now only validates the edit range and marks execution state as dirty.
+- Spreadsheet editing can now return quickly without an immediate full recompute.
 
 ## Phase 4: Deferred Or Manual Processing
 
