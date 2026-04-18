@@ -2,23 +2,37 @@ const FormatService = {
   applyDateBorders(rows, runContext) {
     if (rows.length === 0) return;
 
+    const profile = runContext ? runContext.profile : null;
     const startRow = SheetSchema.BACKLOGS.START_ROW;
     BacklogRepository.clearBordersForRows(startRow, rows.length);
+    AppLogger.profileStep(profile, "FORMAT_CLEAR_BORDERS_DONE", {
+      rowCount: rows.length
+    });
 
+    let borderCount = 0;
     for (let i = 1; i < rows.length; i++) {
       if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
       const rowNumber = startRow + i;
       if (BacklogFormatter.shouldAddBorder(rows[i - 1], rows[i])) {
         BacklogRepository.setTopBorderForRow(rowNumber);
+        borderCount++;
       }
     }
+
+    AppLogger.profileStep(profile, "FORMAT_SET_TOP_BORDERS_DONE", {
+      rowCount: rows.length,
+      borderCount: borderCount
+    });
   },
 
   applyAlignment(rowCount, runContext) {
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
     if (rowCount <= 0) return;
     BacklogRepository.applyAlignments(SheetSchema.BACKLOGS.START_ROW, rowCount);
+    AppLogger.profileStep(runContext ? runContext.profile : null, "FORMAT_ALIGNMENT_DONE", {
+      rowCount: rowCount
+    });
   },
 
   _getTaskGroup(task) {
@@ -40,15 +54,35 @@ const BacklogService = {
   },
 
   sortAndFormat(runContext) {
+    const profile = runContext ? runContext.profile : null;
     const originalValues = BacklogRepository.getRows();
+    AppLogger.profileStep(profile, "BACKLOG_GET_ROWS_DONE", {
+      rowCount: originalValues.length,
+      colCount: SheetSchema.BACKLOGS.NUM_COLS
+    });
     if (originalValues.length === 0) return;
 
     const sortedValues = TaskSorter.sortRows(originalValues);
+    AppLogger.profileStep(profile, "BACKLOG_SORT_ROWS_DONE", {
+      rowCount: sortedValues.length
+    });
     const orderChanged = TaskSorter.isOrderChanged(originalValues, sortedValues);
+    AppLogger.profileStep(profile, "BACKLOG_COMPARE_ORDER_DONE", {
+      orderChanged: orderChanged,
+      rowCount: sortedValues.length
+    });
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
     if (orderChanged) {
       BacklogRepository.replaceRows(sortedValues);
+      AppLogger.profileStep(profile, "BACKLOG_REPLACE_ROWS_DONE", {
+        rowCount: sortedValues.length,
+        colCount: SheetSchema.BACKLOGS.NUM_COLS
+      });
+    } else {
+      AppLogger.profileStep(profile, "BACKLOG_REPLACE_ROWS_SKIPPED", {
+        rowCount: sortedValues.length
+      });
     }
 
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;

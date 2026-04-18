@@ -1,6 +1,10 @@
 const ExecutionCoordinatorService = {
   markDirty(reason) {
     const dirtyState = ExecutionStateRepository.markDirty(reason || "unknown");
+    AppLogger.log(
+      "[EXECUTION] markDirty | reason=" + (reason || "unknown") +
+      " | revision=" + dirtyState.revision
+    );
 
     return {
       accepted: true,
@@ -13,9 +17,16 @@ const ExecutionCoordinatorService = {
     const runReason = reason || "manual";
     const runOptions = options || {};
     const lockTimeoutMs = runOptions.lockTimeoutMs || APP_CONFIG.EXECUTION.LOCK_TIMEOUT_MS;
+    const lockStartedAt = AppLogger.nowMs();
     const lockHandle = LockRepository.tryAcquire(lockTimeoutMs);
+    const lockElapsedMs = AppLogger.nowMs() - lockStartedAt;
 
     if (!lockHandle.acquired) {
+      AppLogger.log(
+        "[EXECUTION] beginRun locked | reason=" + runReason +
+        " | lockTimeoutMs=" + lockTimeoutMs +
+        " | lockWaitMs=" + lockElapsedMs
+      );
       return {
         started: false,
         reason: "locked",
@@ -26,6 +37,11 @@ const ExecutionCoordinatorService = {
     const state = ExecutionStateRepository.getState();
     if (runOptions.requireDirty && !state.dirty) {
       LockRepository.release(lockHandle);
+      AppLogger.log(
+        "[EXECUTION] beginRun clean | reason=" + runReason +
+        " | revision=" + state.revision +
+        " | lockWaitMs=" + lockElapsedMs
+      );
       return {
         started: false,
         reason: "clean",
@@ -36,6 +52,13 @@ const ExecutionCoordinatorService = {
 
     const token = Utils.createRequestId();
     ExecutionStateRepository.setRunning(token, runReason, state.revision);
+    AppLogger.log(
+      "[EXECUTION] beginRun started | reason=" + runReason +
+      " | token=" + token +
+      " | revision=" + state.revision +
+      " | dirty=" + state.dirty +
+      " | lockWaitMs=" + lockElapsedMs
+    );
 
     return {
       started: true,
@@ -56,6 +79,10 @@ const ExecutionCoordinatorService = {
 
   abortIfStale(runContext) {
     if (this.isStale(runContext)) {
+      AppLogger.log(
+        "[EXECUTION] stale run detected | token=" + runContext.token +
+        " | revision=" + runContext.revision
+      );
       this.finishRun(runContext, "stale");
       return true;
     }
@@ -81,5 +108,13 @@ const ExecutionCoordinatorService = {
     }
 
     LockRepository.release(runContext.lockHandle);
+    AppLogger.log(
+      "[EXECUTION] finishRun | token=" + runContext.token +
+      " | reason=" + runContext.reason +
+      " | result=" + (result || "completed") +
+      " | revision=" + runContext.revision +
+      " | currentRevision=" + currentState.revision +
+      " | ownsRunningToken=" + ownsRunningToken
+    );
   }
 };
