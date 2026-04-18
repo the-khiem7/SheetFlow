@@ -32,16 +32,22 @@ Completed notes:
 
 ## Phase 2: Centralized Execution Coordinator
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Introduce a `LockService` wrapper in repository or service layer
-- [ ] Create a coordinator service for lock acquisition, dirty flags, and run tokens
-- [ ] Standardize execution states: `idle`, `pending`, `running`, `stale`
-- [ ] Define lock timeout and retry policy
+- [x] Introduce a `LockService` wrapper in repository or service layer
+- [x] Create a coordinator service for lock acquisition, dirty flags, and run tokens
+- [x] Standardize execution states: `idle`, `pending`, `running`, `stale`
+- [x] Define lock timeout and retry policy
 
 Done when:
 - every heavy refresh path enters through one serialized coordination layer
+
+Completed notes:
+- `LockRepository` now wraps `LockService.getDocumentLock()`.
+- `ExecutionStateRepository` owns dirty/revision/running-token persistence in script properties.
+- `ExecutionCoordinatorService` provides `markDirty`, `beginRun`, `abortIfStale`, and `finishRun`.
+- Existing heavy paths will be migrated to this coordinator in the next phases.
 
 ## Phase 3: Lightweight OnEdit
 
