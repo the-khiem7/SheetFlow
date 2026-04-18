@@ -1,57 +1,115 @@
-# SheetFlow — Project Overview
+# SheetFlow - Project Overview
 
-## Giới thiệu
+## Introduction
 
-SheetFlow là hệ thống quản lý backlog, task tracking và daily report chạy hoàn toàn trên Google Sheets + Google Apps Script. Mã nguồn được quản lý bằng GitHub + clasp.
+SheetFlow is a backlog management, task tracking, and daily reporting system built on top of Google Sheets and Google Apps Script. The codebase is versioned in GitHub and deployed with `clasp`.
 
-Hệ thống hoạt động như một mini workflow engine và data pipeline trên Google Sheets.
+The project behaves like a lightweight workflow engine and spreadsheet-backed data pipeline:
+- desktop users work directly inside Google Sheets
+- the Apps Script project orchestrates sorting, formatting, and report generation
+- mobile clients consume a small HTTP API exposed by the same Apps Script backend
 
-## Tính năng hiện tại
+## Current Features
 
-- Auto-sort Backlogs khi user edit (onEdit trigger)
-- Sort theo: pinned → Work Date → Status → Priority → Project A-Z
-- Auto border phân tách theo pinned / no-date / date-group (SOLID_MEDIUM)
-- Auto alignment (B căn trái, A/C/D/E/F/G căn giữa)
-- Daily Report tự động generate từ Backlogs
-- Tasks group theo Date → Project
-- Finished tasks tách riêng cột F
-- Flutter mobile app gọi API qua Apps Script Web App
-- Desktop users thao tác trực tiếp trên Google Sheets bằng `onEdit`
-- Manual `refreshAll()` để recovery
+- Auto-sort `Backlogs` when users edit the sheet
+- Sort order: pinned -> work date -> status -> priority -> project A-Z
+- Auto border grouping for pinned / no-date / date-group transitions
+- Auto alignment for the backlog grid
+- Daily report matrix generation into `Daily Report!E:F`
+- Daily report message generation into `Backlogs!K2`
+- Manual `refreshAll()` for recovery or forced recompute
+- HTTP API for task and daily report reads
 
-## Kiến trúc tổng quan
+## Daily Report Message
 
+The daily report feature now has two stages:
+
+1. Build the structured daily report matrix in the `Daily Report` sheet.
+2. Compose a final chat-ready message and write it into `Backlogs!K2`.
+
+### Runtime Rule
+
+The final message uses execution time to choose the base report date:
+- before `09:00`: use yesterday as `dayA`
+- from `09:00` onward: use today as `dayA`
+
+Then:
+- `dayB = dayA + 1 day`
+
+### Source Mapping
+
+The final message is composed from the `Daily Report` sheet:
+- `F(dayA)` -> completed work section
+- `E(dayB)` -> today plan section
+
+### Output Target
+
+- sheet: `Backlogs`
+- cell: `K2`
+- type: single multiline string
+
+## Backend Surface
+
+The Apps Script backend currently exposes:
+- `GET /?path=tasks`
+- `GET /?path=reports/daily`
+
+Authentication is handled by API key validation in `ApiAuth`.
+
+### `reports/daily` response shape
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "date": "2026-04-15",
+      "goals": "1. Project A\n- Task 1",
+      "finished": "1. Project A\n- Task Done 1"
+    }
+  ]
+}
 ```
-Backlogs Sheet (Database Table)
-        ↓              Flutter Mobile
-Desktop Flow      ↔     HTTP API
-        ↓
-Apps Script Backend (layered structure)
-        ↓
-Repositories + Domain + Services
-        ↓
-Daily Report Sheet (Materialized View)
+
+Notes:
+- `goals` is sourced from `Daily Report!E`
+- `finished` is sourced from `Daily Report!F`
+- this endpoint returns raw report blocks, not the final chat-ready message in `Backlogs!K2`
+
+## System View
+
+```text
+Backlogs Sheet
+    -> Desktop flow via onEdit / refreshAll
+    -> Apps Script backend
+    -> Repositories + Domain + Services
+    -> Daily Report sheet
+    -> Final message written back to Backlogs!K2
+
+Flutter Mobile
+    -> HTTP API
+    -> Apps Script backend
 ```
 
 ## Tech Stack
 
-- Google Sheets — Database + UI
-- Google Apps Script (V8) — Backend
-- clasp — Local development + deployment
-- GitHub — Source control
-- GitHub Actions — CI/CD
+- Google Sheets - UI and persistent storage
+- Google Apps Script (V8) - backend runtime
+- `clasp` - local development and deployment
+- GitHub - source control
+- GitHub Actions - CI/CD
 
 ## Deployment
 
+```text
+git push -> GitHub Actions -> clasp push -> Apps Script updated
 ```
-git push → GitHub Actions → SheetFlow.AppScript/clasp push → Apps Script updated
-```
 
-## Nguồn gốc
+## Future API Direction
 
-Dự án bắt đầu từ một script `onEdit` đơn giản để auto-sort Backlogs. Qua nhiều iteration, nó phát triển thành một Apps Script backend có:
+The current implementation keeps the final message as a spreadsheet-side artifact only.
 
-- desktop flow cho Google Sheets trực tiếp
-- mobile API cho Flutter client
-- layered structure với config/domain/repository/service/api/app
-- CI/CD bằng `clasp` + GitHub Actions
+If mobile clients need the final message directly, the natural follow-up is:
+- `GET /?path=reports/daily-message`
+
+That endpoint is not part of the current contract yet.

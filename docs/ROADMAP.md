@@ -1,67 +1,83 @@
-# SheetFlow — Roadmap
+# SheetFlow - Roadmap
 
 ## Phase 0: Foundation (Done)
-- [x] Basic onEdit auto-sort (A:G columns)
-- [x] sortBacklogs() manual trigger
-- [x] applyDateBorders (top border khi đổi ngày)
-- [x] applyAlignment (B left, ACDEF center)
-- [x] Fix trigger cho tất cả cột A-F
-- [x] Daily Report generation (group by Date → Project)
-- [x] Finished tasks filter cho cột F
-- [x] Utils: toDateKey, isSameDate, safeTrim
-- [x] Sort A-Z theo Project (tie-breaker)
-- [x] Bỏ dãn dòng giữa project trong report
+
+- [x] Basic onEdit auto-sort for `Backlogs`
+- [x] Manual `sortBacklogs()` trigger
+- [x] Date-group top borders
+- [x] Alignment rules for backlog columns
+- [x] Daily report matrix generation grouped by `Date -> Project`
+- [x] Finished task filtering for the daily report
+- [x] Core date/string helpers in `Utils`
+- [x] Project A-Z tie-break sorting
 
 ## Phase 1: Service Layer Refactor (Done)
-- [x] CONFIG layer trung tâm
-- [x] BacklogService object
-- [x] DailyReportService object
-- [x] FormatService object
-- [x] Utils object với getDataRange
-- [x] refreshAll() manual command
 
-## Phase 2: Concurrency & Performance (Not Started)
-- [ ] LockService.tryLock() trong onEdit
-- [ ] Selective daily refresh (chỉ khi edit cột A/B/D/E)
-- [ ] LockService wrapper (centralized lock management)
-- [ ] Debounce refreshDailyReport bằng CacheService
-- [ ] Edit Queue (onEdit chỉ mark dirty, worker xử lý sau)
-- [ ] Batch formatting (giảm setBorder/setAlignment calls)
-- [ ] Partial refresh (chỉ refresh ngày bị ảnh hưởng)
-- [ ] Cache backlog grouping
+- [x] Centralized config layer
+- [x] `BacklogService`
+- [x] `DailyReportService`
+- [x] `FormatService`
+- [x] Shared `Utils.getDataRange(...)`
+- [x] Manual `refreshAll()` entrypoint
+
+## Phase 2: Concurrency And Performance (Not Started)
+
+- [ ] `LockService.tryLock()` in `onEdit`
+- [ ] Selective daily refresh for relevant edit columns only
+- [ ] Centralized lock wrapper
+- [ ] Debounce report refresh with `CacheService`
+- [ ] Edit queue pattern
+- [ ] Batch formatting to reduce API calls
+- [ ] Partial refresh by impacted date only
+- [ ] Cache grouped backlog data
 
 ## Phase 3: Multi-file Structure (Done)
-- [x] Tách code.gs thành nhiều file theo service
-- [x] config.gs
-- [x] utils.gs
-- [x] format.service.gs
-- [x] backlog.service.gs
-- [x] dailyreport.service.gs
-- [x] main.gs (event handlers + manual commands)
+
+- [x] Split `code.gs` into multiple files
+- [x] `config.gs`
+- [x] `utils.gs`
+- [x] `format.service.gs`
+- [x] `backlog.service.gs`
+- [x] `dailyreport.service.gs`
+- [x] `main.gs`
 
 ## Phase 3.5: Layered Folder Refactor (Done)
-- [x] Tách `src/` thành `app`, `api`, `config`, `domain`, `repositories`, `services`, `shared`
-- [x] Tạo `sheet.schema.gs` làm nguồn chân lý cho schema bảng
-- [x] Đưa toàn bộ `SpreadsheetApp` access vào repository layer
-- [x] Đưa toàn bộ `PropertiesService` access vào repository layer
-- [x] Tách desktop flow khỏi Flutter API flow
-- [x] Chuẩn hóa field cột F thành `note`
-- [x] Giữ global entrypoints chỉ còn trong `src/app/main.gs`
+
+- [x] Split `src/` into `app`, `api`, `config`, `domain`, `repositories`, `services`, `shared`
+- [x] Introduce `sheet.schema.gs` as the sheet source of truth
+- [x] Move all `SpreadsheetApp` access into repositories
+- [x] Move all `PropertiesService` access into repositories
+- [x] Separate desktop flow from Flutter API flow
+- [x] Normalize column F as `note`
+- [x] Keep global entrypoints only in `src/app/main.gs`
 
 ## Phase 4: CI/CD (Done)
-- [x] GitHub Actions workflow (clasp push on main push)
-- [x] CLASP_CREDENTIALS secret setup
-- [x] SCRIPT_ID secret (không commit scriptId vào repo)
-- [x] .clasp.json gitignored, generate trong CI
-- [x] .clasp.json.example template
 
-## Phase 5: Future Enhancements
-- [ ] LockService / CacheService integration cho desktop flow
-- [ ] Validation layer riêng cho API payload
-- [ ] Dedicated DTO / serializer layer cho Flutter API
-- [ ] Auto tính Total Hours từ Check-in/Check-out
+- [x] GitHub Actions workflow for `clasp push`
+- [x] `CLASP_CREDENTIALS` secret setup
+- [x] `SCRIPT_ID` secret usage in CI
+- [x] Local `.clasp.json` excluded from git
+- [x] `.clasp.json.example` committed as template
+
+## Phase 5: Daily Report Message (Done)
+
+- [x] Add schema coordinates for `Backlogs!K2`
+- [x] Add config for cutoff hour and spreadsheet URL
+- [x] Add `daily-report-message.builder.gs`
+- [x] Resolve `dayA/dayB` from execution time
+- [x] Read `F(dayA)` and `E(dayB)` from `Daily Report`
+- [x] Compose final message in the fixed template
+- [x] Write the final message to `Backlogs!K2`
+- [x] Add manual tests for date resolution and message formatting
+
+## Phase 6: Future Enhancements
+
+- [ ] LockService / CacheService integration for desktop flow
+- [ ] Dedicated validation layer for API payloads
+- [ ] DTO / serializer layer for Flutter API
+- [ ] Auto-calculate total hours from check-in / check-out
 - [ ] Auto weekly summary sheet
-- [ ] Sort project trong E/F theo priority hoặc số task
-- [ ] CacheService cho grouped data
-- [ ] Version tagging trong CI/CD
-- [ ] Staging vs production script project
+- [ ] Sort projects inside daily report output by richer business rules
+- [ ] Cache grouped report data
+- [ ] Version tagging in CI/CD
+- [ ] Staging vs production Apps Script project split
