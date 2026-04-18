@@ -1,27 +1,24 @@
 const FormatService = {
-  applyDateBorders(runContext) {
-    const rows = BacklogRepository.getRows();
+  applyDateBorders(rows, runContext) {
     if (rows.length === 0) return;
 
     const startRow = SheetSchema.BACKLOGS.START_ROW;
+    BacklogRepository.clearBordersForRows(startRow, rows.length);
+
     for (let i = 1; i < rows.length; i++) {
       if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
       const rowNumber = startRow + i;
-      BacklogRepository.clearBordersForRow(rowNumber);
-
       if (BacklogFormatter.shouldAddBorder(rows[i - 1], rows[i])) {
         BacklogRepository.setTopBorderForRow(rowNumber);
       }
     }
   },
 
-  applyAlignment(runContext) {
+  applyAlignment(rowCount, runContext) {
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
-
-    const rows = BacklogRepository.getRows();
-    if (rows.length === 0) return;
-    BacklogRepository.applyAlignments(SheetSchema.BACKLOGS.START_ROW, rows.length);
+    if (rowCount <= 0) return;
+    BacklogRepository.applyAlignments(SheetSchema.BACKLOGS.START_ROW, rowCount);
   },
 
   _getTaskGroup(task) {
@@ -47,16 +44,18 @@ const BacklogService = {
     if (originalValues.length === 0) return;
 
     const sortedValues = TaskSorter.sortRows(originalValues);
+    const orderChanged = TaskSorter.isOrderChanged(originalValues, sortedValues);
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
-    if (TaskSorter.isOrderChanged(originalValues, sortedValues)) {
+    if (orderChanged) {
       BacklogRepository.replaceRows(sortedValues);
     }
 
     if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
-    FormatService.applyDateBorders(runContext);
-    FormatService.applyAlignment(runContext);
+    const finalRows = orderChanged ? sortedValues : originalValues;
+    FormatService.applyDateBorders(finalRows, runContext);
+    FormatService.applyAlignment(finalRows.length, runContext);
   },
 
   sortManual(runContext) {

@@ -107,16 +107,22 @@ Completed notes:
 
 ## Phase 6: Reduce Write Amplification
 
-Status: `planned`
+Status: `completed`
 
 Tasks:
-- [ ] Review `BacklogRepository.replaceRows(...)` for full-range overwrite risks
-- [ ] Avoid unnecessary rewrites when order did not change
-- [ ] Reduce formatting calls to batched operations only
-- [ ] Split data refresh from cosmetic formatting where possible
+- [x] Review `BacklogRepository.replaceRows(...)` for full-range overwrite risks
+- [x] Avoid unnecessary rewrites when order did not change
+- [x] Reduce formatting calls to batched operations only
+- [x] Split data refresh from cosmetic formatting where possible
 
 Done when:
 - refreshes write less data and make fewer expensive spreadsheet calls
+
+Completed notes:
+- formatting now clears borders in one range operation instead of one row at a time
+- formatting reuses the in-memory sorted snapshot instead of rereading the sheet
+- alignment now uses row counts directly instead of refetching backlog rows
+- full-range rewrite remains part of sorting, but stale-run protection now prevents the worst overwrite cases
 
 ## Phase 7: API Alignment
 

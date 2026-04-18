@@ -103,6 +103,20 @@ const BacklogRepository = {
     SpreadsheetRepository.clearBorders(range);
   },
 
+  clearBordersForRows(startRow, numRows) {
+    const sheet = this.getSheet();
+    if (!sheet || numRows <= 0) return;
+
+    const range = SpreadsheetRepository.getRange(
+      sheet,
+      startRow,
+      SheetSchema.BACKLOGS.START_COL,
+      numRows,
+      SheetSchema.BACKLOGS.NUM_COLS
+    );
+    SpreadsheetRepository.clearBorders(range);
+  },
+
   setTopBorderForRow(rowNumber) {
     const sheet = this.getSheet();
     if (!sheet) return;
