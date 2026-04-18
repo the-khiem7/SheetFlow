@@ -1,6 +1,7 @@
 const FormatService = {
   applyDateBorders(rows, runContext) {
     if (rows.length === 0) return;
+    if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
     const profile = runContext ? runContext.profile : null;
     const startRow = SheetSchema.BACKLOGS.START_ROW;
@@ -11,7 +12,8 @@ const FormatService = {
 
     let borderCount = 0;
     for (let i = 1; i < rows.length; i++) {
-      if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
+      // Coarse-grained stale checks preserve safety without paying the cost on every row.
+      if (i % 25 === 0 && ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
       const rowNumber = startRow + i;
       if (BacklogFormatter.shouldAddBorder(rows[i - 1], rows[i])) {
@@ -19,6 +21,8 @@ const FormatService = {
         borderCount++;
       }
     }
+
+    if (ExecutionCoordinatorService.abortIfStale(runContext)) return;
 
     AppLogger.profileStep(profile, "FORMAT_SET_TOP_BORDERS_DONE", {
       rowCount: rows.length,
