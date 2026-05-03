@@ -45,28 +45,33 @@ function runAllTests() {
     testDailyReportMessageFormatting();
     console.log("   PASS: Daily report message formatting test passed\n");
 
-    // Test 9: Execution coordinator lifecycle
-    console.log("9. Testing execution coordinator lifecycle...");
+    // Test 9: Weekend completed report merge
+    console.log("9. Testing weekend completed report merge...");
+    testWeekendCompletedReportMerge();
+    console.log("   PASS: Weekend completed report merge test passed\n");
+
+    // Test 10: Execution coordinator lifecycle
+    console.log("10. Testing execution coordinator lifecycle...");
     testExecutionCoordinatorLifecycle();
     console.log("   PASS: Execution coordinator lifecycle test passed\n");
 
-    // Test 10: Execution coordinator lock failure
-    console.log("10. Testing execution coordinator lock failure...");
+    // Test 11: Execution coordinator lock failure
+    console.log("11. Testing execution coordinator lock failure...");
     testExecutionCoordinatorLockFailure();
     console.log("   PASS: Execution coordinator lock failure test passed\n");
 
-    // Test 11: Execution coordinator stale detection
-    console.log("11. Testing execution coordinator stale detection...");
+    // Test 12: Execution coordinator stale detection
+    console.log("12. Testing execution coordinator stale detection...");
     testExecutionCoordinatorStaleDetection();
     console.log("   PASS: Execution coordinator stale detection test passed\n");
 
-    // Test 12: Refresh service guarded processing
-    console.log("12. Testing refresh service guarded processing...");
+    // Test 13: Refresh service guarded processing
+    console.log("13. Testing refresh service guarded processing...");
     testRefreshServiceGuardedProcessing();
     console.log("   PASS: Refresh service guarded processing test passed\n");
 
-    // Test 13: API refresh handlers
-    console.log("13. Testing API refresh handlers...");
+    // Test 14: API refresh handlers
+    console.log("14. Testing API refresh handlers...");
     testApiRefreshHandlers();
     console.log("   PASS: API refresh handlers test passed\n");
 
@@ -217,6 +222,28 @@ function testDailyReportMessageDateResolution() {
   if (afterResolved.dayBKey !== "2026-04-16") {
     throw new Error(`After cutoff dayB should be 2026-04-16, got ${afterResolved.dayBKey}`);
   }
+
+  const fridayBeforeWeekend = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-01T08:59:00"));
+  assertDailyReportResolvedDates(fridayBeforeWeekend, false, "2026-04-30", "2026-05-01", "Friday 08:59");
+
+  const fridayWeekendStart = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-01T09:00:00"));
+  assertDailyReportResolvedDates(fridayWeekendStart, true, "2026-05-01", "2026-05-04", "Friday 09:00");
+
+  const saturdayWeekend = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-02T14:30:00"));
+  assertDailyReportResolvedDates(saturdayWeekend, true, "2026-05-01", "2026-05-04", "Saturday");
+
+  const sundayWeekend = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-03T14:30:00"));
+  assertDailyReportResolvedDates(sundayWeekend, true, "2026-05-01", "2026-05-04", "Sunday");
+
+  const mondayBeforeCutoff = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-04T08:59:00"));
+  assertDailyReportResolvedDates(mondayBeforeCutoff, true, "2026-05-01", "2026-05-04", "Monday 08:59");
+
+  const mondayCutoff = DailyReportMessageBuilder.resolveReportDates(new Date("2026-05-04T09:00:00"));
+  assertDailyReportResolvedDates(mondayCutoff, false, "2026-05-04", "2026-05-05", "Monday 09:00");
+
+  if (fridayWeekendStart.dayADisplay !== "01,02,03/05/2026") {
+    throw new Error(`Weekend dayADisplay should be 01,02,03/05/2026, got ${fridayWeekendStart.dayADisplay}`);
+  }
 }
 
 function testDailyReportMessageFormatting() {
@@ -254,6 +281,57 @@ function testDailyReportMessageFormatting() {
 
   if (emptyMessage.indexOf("Công việc hôm nay (16/04/2026):\n-") === -1) {
     throw new Error("Empty today section fallback is incorrect");
+  }
+}
+
+function testWeekendCompletedReportMerge() {
+  const merged = DailyReportMessageBuilder.mergeCompletedProjectBlocks([
+    "2. SheetFlow\n- Fix auto sort Backlogs",
+    "1. Flutter Mobile\n- Connect API get tasks",
+    "3. SheetFlow\n- Verify daily report message"
+  ]);
+
+  const expected = [
+    "1. SheetFlow",
+    "- Fix auto sort Backlogs",
+    "- Verify daily report message",
+    "2. Flutter Mobile",
+    "- Connect API get tasks"
+  ].join("\n");
+
+  if (merged !== expected) {
+    throw new Error(`Weekend completed merge failed. Expected: ${JSON.stringify(expected)}, Got: ${JSON.stringify(merged)}`);
+  }
+
+  if (merged.indexOf("2. SheetFlow") !== -1 || merged.indexOf("3. SheetFlow") !== -1) {
+    throw new Error("Weekend completed merge should render project indexes from 1..n");
+  }
+
+  const emptyMerged = DailyReportMessageBuilder.mergeCompletedProjectBlocks(["", "   ", null]);
+  const emptyMessage = DailyReportMessageBuilder.buildMessage({
+    dayADisplay: "01,02,03/05/2026",
+    dayBDisplay: "04/05/2026",
+    completedText: emptyMerged,
+    todayText: "",
+    spreadsheetUrl: "https://example.com/sheet"
+  });
+
+  if (emptyMessage.indexOf("Ná»™i dung Ä‘Ã£ thá»±c hiá»‡n:\n-") === -1) {
+    throw new Error("Weekend empty completed section fallback is incorrect");
+  }
+}
+
+function assertDailyReportResolvedDates(resolved, expectedWeekendWindow, expectedDayAKey, expectedDayBKey, label) {
+  if (!!resolved.isWeekendWindow !== expectedWeekendWindow) {
+    throw new Error(`${label} weekendWindow should be ${expectedWeekendWindow}, got ${resolved.isWeekendWindow}`);
+  }
+
+  if (resolved.dayAKey !== expectedDayAKey) {
+    throw new Error(`${label} dayA should be ${expectedDayAKey}, got ${resolved.dayAKey}`);
+  }
+
+  if (resolved.dayBKey !== expectedDayBKey) {
+    throw new Error(`${label} dayB should be ${expectedDayBKey}, got ${resolved.dayBKey}`);
   }
 }
 

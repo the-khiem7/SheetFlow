@@ -39,7 +39,8 @@ const DailyReportService = {
     const resolvedDates = DailyReportMessageBuilder.resolveReportDates(now || new Date());
     AppLogger.profileStep(profile, "DAILY_MESSAGE_RESOLVE_DATES_DONE", {
       dayA: resolvedDates ? resolvedDates.dayAKey : "",
-      dayB: resolvedDates ? resolvedDates.dayBKey : ""
+      dayB: resolvedDates ? resolvedDates.dayBKey : "",
+      weekendWindow: resolvedDates ? !!resolvedDates.isWeekendWindow : false
     });
     if (!resolvedDates) {
       BacklogRepository.writeDailyMessage("");
@@ -47,10 +48,29 @@ const DailyReportService = {
       return;
     }
 
-    const completedReport = DailyReportRepository.getReportByDate(resolvedDates.dayA);
-    AppLogger.profileStep(profile, "DAILY_MESSAGE_GET_COMPLETED_REPORT_DONE", {
-      found: !!completedReport,
-      date: resolvedDates.dayAKey
+    let completedText = "";
+    if (resolvedDates.isWeekendWindow) {
+      const completedBlocks = [];
+      for (let i = 0; i < resolvedDates.completedDates.length; i++) {
+        const completedReport = DailyReportRepository.getReportByDate(resolvedDates.completedDates[i]);
+        AppLogger.profileStep(profile, "DAILY_MESSAGE_GET_WEEKEND_COMPLETED_REPORT_DONE", {
+          found: !!completedReport,
+          date: resolvedDates.completedDateKeys[i]
+        });
+        completedBlocks.push(completedReport ? completedReport.finished : "");
+      }
+      completedText = DailyReportMessageBuilder.mergeCompletedProjectBlocks(completedBlocks);
+    } else {
+      const completedReport = DailyReportRepository.getReportByDate(resolvedDates.dayA);
+      completedText = completedReport ? completedReport.finished : "";
+      AppLogger.profileStep(profile, "DAILY_MESSAGE_GET_COMPLETED_REPORT_DONE", {
+        found: !!completedReport,
+        date: resolvedDates.dayAKey
+      });
+    }
+    AppLogger.profileStep(profile, "DAILY_MESSAGE_COMPLETED_TEXT_READY", {
+      length: completedText ? completedText.length : 0,
+      weekendWindow: !!resolvedDates.isWeekendWindow
     });
     const todayReport = DailyReportRepository.getReportByDate(resolvedDates.dayB);
     AppLogger.profileStep(profile, "DAILY_MESSAGE_GET_TODAY_REPORT_DONE", {
@@ -62,7 +82,7 @@ const DailyReportService = {
     const message = DailyReportMessageBuilder.buildMessage({
       dayADisplay: resolvedDates.dayADisplay,
       dayBDisplay: resolvedDates.dayBDisplay,
-      completedText: completedReport ? completedReport.finished : "",
+      completedText: completedText,
       todayText: todayReport ? todayReport.goals : "",
       spreadsheetUrl: APP_CONFIG.DAILY_REPORT_MESSAGE.SPREADSHEET_URL
     });
